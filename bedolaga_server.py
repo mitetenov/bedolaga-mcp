@@ -48,6 +48,20 @@ def handle_request(request: dict) -> dict:
                         },
                         "required": ["telegram_id"]
                     }
+                },
+                {
+                    "name": "bedolaga_subscription",
+                    "description": "Get user subscription status from Bedolaga bot by Telegram ID. Returns tariff, period, and active status. Readonly — no data is modified.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "telegram_id": {
+                                "type": "integer",
+                                "description": "Telegram user ID"
+                            }
+                        },
+                        "required": ["telegram_id"]
+                    }
                 }
             ]
         }
@@ -77,6 +91,36 @@ def handle_request(request: dict) -> dict:
                 "content": [{
                     "type": "text",
                     "text": f"💰 {username}: {rubles:.2f} ₽ (status: {status})"
+                }]
+            }
+        
+        if tool_name == "bedolaga_subscription":
+            tid = args.get("telegram_id")
+            if not tid:
+                return {"content": [{"type": "text", "text": "Error: telegram_id required"}]}
+            
+            user = get_user_by_telegram_id(int(tid))
+            if user is None:
+                return {"content": [{"type": "text", "text": "Error: BEDOLAGA_API_URL and BEDOLAGA_API_KEY not configured"}]}
+            
+            if "error" in user:
+                return {"content": [{"type": "text", "text": f"API error: {user['error']}"}]}
+            
+            username = user.get("username") or user.get("first_name") or f"ID:{tid}"
+            subscription = user.get("subscription")
+            
+            if subscription is None or not isinstance(subscription, dict):
+                return {"content": [{"type": "text", "text": f"📋 {username}: no subscription"}]}
+            
+            tariff = subscription.get("tariff", "unknown")
+            period = subscription.get("period", "unknown")
+            active = subscription.get("active", False)
+            active_str = "✅ active" if active else "❌ inactive"
+            
+            return {
+                "content": [{
+                    "type": "text",
+                    "text": f"📋 {username}: tariff={tariff}, period={period}, {active_str}"
                 }]
             }
         
