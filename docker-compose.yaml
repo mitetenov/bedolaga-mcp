@@ -1,8 +1,12 @@
 services:
   bedolaga-mcp:
     build: .
+    ports:
+      - "3100:3100"
     environment:
       - BEDOLAGA_API_URL=${BEDOLAGA_API_URL}
       - BEDOLAGA_API_KEY=${BEDOLAGA_API_KEY}
-    stdin_open: true
-    restart: "no"
+      - PORT=3100
+      - HOST=0.0.0.0
+    command: python3 http_server.py
+    restart: unless-stopped

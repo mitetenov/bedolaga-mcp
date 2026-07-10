@@ -1,2 +1,2 @@
-# Bedolaga MCP Server
-# No external Python deps — uses stdlib only (urllib, json)
+mcp>=1.8.0
+uvicorn>=0.29.0
