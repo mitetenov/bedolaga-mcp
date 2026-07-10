@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """MCP StreamableHTTP server for Bedolaga — serves the bedolaga_balance tool over HTTP on port 3100."""
 
+import json
 import os
 import sys
 
@@ -44,6 +45,37 @@ def bedolaga_balance(telegram_id: int) -> str:
 
 
 @mcp.tool()
+def bedolaga_subscription(telegram_id: int) -> str:
+    """Get user subscription status from Bedolaga bot by Telegram ID.
+
+    Returns tariff, period, and active status of the user's subscription.
+    This is a readonly tool — no data is modified.
+
+    Args:
+        telegram_id: Telegram user ID
+    """
+    user = get_user_by_telegram_id(telegram_id)
+    if user is None:
+        return "Error: BEDOLAGA_API_URL and BEDOLAGA_API_KEY not configured"
+
+    if "error" in user:
+        return f"API error: {user['error']}"
+
+    username = user.get("username") or user.get("first_name") or f"ID:{telegram_id}"
+    subscription = user.get("subscription")
+
+    if subscription is None or not isinstance(subscription, dict):
+        return f"📋 {username}: no subscription"
+
+    tariff = subscription.get("tariff", "unknown")
+    period = subscription.get("period", "unknown")
+    active = subscription.get("active", False)
+    active_str = "✅ active" if active else "❌ inactive"
+
+    return f"📋 {username}: tariff={tariff}, period={period}, {active_str}"
+
+
+@mcp.tool()
 def bedolaga_transactions(telegram_id: int) -> str:
     """Get top-up transaction history for a user from Bedolaga bot by Telegram ID. Returns a list of transactions.
 
@@ -82,7 +114,6 @@ def bedolaga_transactions(telegram_id: int) -> str:
             lines.append(f"  • {amount:.2f} ₽ — {description} ({ts})")
         return "\n".join(lines)
 
-    import json
     return json.dumps(transactions, ensure_ascii=False, indent=2)
 
 

@@ -12,7 +12,7 @@ def req(method, params=None, session_id=None):
     }
     if session_id:
         headers["Mcp-Session-Id"] = session_id
-    
+
     body = {
         "jsonrpc": "2.0",
         "method": method,
@@ -20,7 +20,7 @@ def req(method, params=None, session_id=None):
     }
     if params:
         body["params"] = params
-    
+
     data = json.dumps(body).encode()
     r = urllib.request.Request(BASE, data=data, headers=headers, method="POST")
     with urllib.request.urlopen(r, timeout=10) as resp:
@@ -44,12 +44,17 @@ if __name__ == "__main__":
     print("\n=== tools/list ===")
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
-    # Step 3: Call balance tool
+    # Step 3: Call bedolaga_balance
     result, _ = req("tools/call", params={"name": "bedolaga_balance", "arguments": {"telegram_id": 123456789}}, session_id=session_id)
     print("\n=== tools/call bedolaga_balance ===")
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
-    # Step 4: Call transactions tool
+    # Step 4: Call bedolaga_subscription
+    result, _ = req("tools/call", params={"name": "bedolaga_subscription", "arguments": {"telegram_id": 123456789}}, session_id=session_id)
+    print("\n=== tools/call bedolaga_subscription ===")
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+
+    # Step 5: Call bedolaga_transactions
     result, _ = req("tools/call", params={"name": "bedolaga_transactions", "arguments": {"telegram_id": 123456789}}, session_id=session_id)
     print("\n=== tools/call bedolaga_transactions ===")
     print(json.dumps(result, indent=2, ensure_ascii=False))
