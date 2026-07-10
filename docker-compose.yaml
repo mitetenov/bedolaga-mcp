@@ -1,0 +1,8 @@
+services:
+  bedolaga-mcp:
+    build: .
+    environment:
+      - BEDOLAGA_API_URL=${BEDOLAGA_API_URL}
+      - BEDOLAGA_API_KEY=${BEDOLAGA_API_KEY}
+    stdin_open: true
+    restart: "no"

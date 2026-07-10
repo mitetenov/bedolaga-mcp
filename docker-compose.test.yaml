@@ -1,0 +1,7 @@
+services:
+  test:
+    build: .
+    environment:
+      - BEDOLAGA_API_URL=
+      - BEDOLAGA_API_KEY=
+    command: python3 -m pytest tests/ -v
