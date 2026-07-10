@@ -345,6 +345,85 @@ class TestHandleRequestTransactions(unittest.TestCase):
         text = response["content"][0]["text"]
         self.assertIn('"count"', text)
 
+    @patch("bedolaga_server.get_transactions")
+    @patch("bedolaga_server.get_user_by_telegram_id")
+    def test_negative_telegram_id_calls_api(self, mock_get_user, mock_get_tx):
+        """Negative telegram_id is a valid int — passes through to API calls."""
+        mock_get_user.return_value = _mock_user(telegram_id=-777)
+        mock_get_tx.return_value = _mock_transactions(count=1)
+
+        request = {
+            "method": "tools/call",
+            "params": {
+                "name": "bedolaga_transactions",
+                "arguments": {"telegram_id": -777},
+            },
+        }
+        response = bedolaga_server.handle_request(request)
+        text = response["content"][0]["text"]
+        self.assertIn("📋 testuser — transactions:", text)
+
+    def test_zero_telegram_id_treated_as_missing(self):
+        """0 is falsy — triggers 'telegram_id required'."""
+        request = {
+            "method": "tools/call",
+            "params": {
+                "name": "bedolaga_transactions",
+                "arguments": {"telegram_id": 0},
+            },
+        }
+        response = bedolaga_server.handle_request(request)
+        text = response["content"][0]["text"]
+        self.assertIn("telegram_id required", text)
+
+    def test_non_integer_telegram_id_raises_valueerror(self):
+        """Non-numeric string crashes int() — documents current behaviour."""
+        request = {
+            "method": "tools/call",
+            "params": {
+                "name": "bedolaga_transactions",
+                "arguments": {"telegram_id": "abc123"},
+            },
+        }
+        with self.assertRaises(ValueError):
+            bedolaga_server.handle_request(request)
+
+    @patch("bedolaga_server.get_user_by_telegram_id")
+    def test_network_error_during_user_lookup(self, mock_get_user):
+        """Network failure during user lookup bubbles up as API error."""
+        mock_get_user.return_value = {"error": "Connection refused"}
+
+        request = {
+            "method": "tools/call",
+            "params": {
+                "name": "bedolaga_transactions",
+                "arguments": {"telegram_id": 123},
+            },
+        }
+        response = bedolaga_server.handle_request(request)
+        text = response["content"][0]["text"]
+        self.assertIn("API error:", text)
+        self.assertIn("Connection refused", text)
+
+    @patch("bedolaga_server.get_transactions")
+    @patch("bedolaga_server.get_user_by_telegram_id")
+    def test_network_error_during_transactions_fetch(self, mock_get_user, mock_get_tx):
+        """Network failure during transactions fetch bubbles up as API error."""
+        mock_get_user.return_value = _mock_user()
+        mock_get_tx.return_value = {"error": "Timeout"}
+
+        request = {
+            "method": "tools/call",
+            "params": {
+                "name": "bedolaga_transactions",
+                "arguments": {"telegram_id": 123},
+            },
+        }
+        response = bedolaga_server.handle_request(request)
+        text = response["content"][0]["text"]
+        self.assertIn("API error:", text)
+        self.assertIn("Timeout", text)
+
 
 # ---------------------------------------------------------------------------
 # Tests: http_server.py — bedolaga_transactions (FastMCP decorator)
