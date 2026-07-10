@@ -44,7 +44,12 @@ if __name__ == "__main__":
     print("\n=== tools/list ===")
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
-    # Step 3: Call tool
+    # Step 3: Call bedolaga_balance
     result, _ = req("tools/call", params={"name": "bedolaga_balance", "arguments": {"telegram_id": 123456789}}, session_id=session_id)
-    print("\n=== tools/call ===")
+    print("\n=== tools/call bedolaga_balance ===")
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+
+    # Step 4: Call bedolaga_subscription
+    result, _ = req("tools/call", params={"name": "bedolaga_subscription", "arguments": {"telegram_id": 123456789}}, session_id=session_id)
+    print("\n=== tools/call bedolaga_subscription ===")
     print(json.dumps(result, indent=2, ensure_ascii=False))
