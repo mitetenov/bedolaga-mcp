@@ -2,10 +2,87 @@
 
 MCP-сервер для получения баланса пользователя из [Bedolaga Bot](https://github.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot) по Telegram ID.
 
-## Возможности
+## Инструменты (Tools)
 
-- `bedolaga_balance` — получить баланс пользователя в рублях по Telegram ID
-- `bedolaga_transactions` — получить историю пополнений пользователя по Telegram ID
+Сервер предоставляет три инструмента, доступных через MCP-протокол. Все инструменты **readonly** — данные не изменяются.
+
+### `bedolaga_balance`
+
+Получить баланс пользователя в рублях по Telegram ID.
+
+**Параметры:**
+
+| Параметр | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `telegram_id` | `int` | Да | Telegram ID пользователя |
+
+**Возвращает:** строку вида `💰 username: 150.00 ₽ (status: active)`
+
+**Вызов через JSON-RPC:**
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "bedolaga_balance",
+    "arguments": { "telegram_id": 123456789 }
+  }
+}
+```
+
+### `bedolaga_subscription`
+
+Получить статус подписки пользователя по Telegram ID.
+
+**Параметры:**
+
+| Параметр | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `telegram_id` | `int` | Да | Telegram ID пользователя |
+
+**Возвращает:** строку вида `📋 username: tariff=pro, period=monthly, ✅ active`
+
+**Вызов через JSON-RPC:**
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "bedolaga_subscription",
+    "arguments": { "telegram_id": 123456789 }
+  }
+}
+```
+
+### `bedolaga_transactions`
+
+Получить историю пополнений пользователя по Telegram ID.
+
+**Параметры:**
+
+| Параметр | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `telegram_id` | `int` | Да | Telegram ID пользователя |
+
+**Возвращает:** многострочную строку со списком транзакций:
+
+```
+📋 username — transactions:
+  • 500.00 ₽ — Пополнение баланса (2024-01-15T12:00:00)
+  • 1000.00 ₽ — Пополнение баланса (2024-01-20T18:30:00)
+```
+
+**Вызов через JSON-RPC:**
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "bedolaga_transactions",
+    "arguments": { "telegram_id": 123456789 }
+  }
+}
+```
 
 ## Транспорты
 
@@ -134,11 +211,24 @@ curl -s -X POST http://localhost:3100/mcp \
   -H "Mcp-Session-Id: <SESSION_ID>" \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":2}'
 
-# Вызов инструмента
+# Вызов инструментов
+# Баланс
 curl -s -X POST http://localhost:3100/mcp \
   -H "Content-Type: application/json" \
   -H "Mcp-Session-Id: <SESSION_ID>" \
   -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"bedolaga_balance","arguments":{"telegram_id":123456789}},"id":3}'
+
+# Подписка
+curl -s -X POST http://localhost:3100/mcp \
+  -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: <SESSION_ID>" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"bedolaga_subscription","arguments":{"telegram_id":123456789}},"id":4}'
+
+# Транзакции
+curl -s -X POST http://localhost:3100/mcp \
+  -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: <SESSION_ID>" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"bedolaga_transactions","arguments":{"telegram_id":123456789}},"id":5}'
 ```
 
 ### Stdio (legacy транспорт)
