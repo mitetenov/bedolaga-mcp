@@ -20,6 +20,8 @@ URL and no tool results.
 from __future__ import annotations
 
 import asyncio
+import os
+from typing import Mapping
 
 import uvicorn
 from starlette.applications import Starlette
@@ -29,6 +31,26 @@ from . import __version__
 from .config import load_config
 from .server import SERVER_NAME, create_server
 from .tools import close_client
+
+
+def _bind_environ(environ: Mapping[str, str] | None = None) -> dict[str, str]:
+    """Resolve the HTTP bind env vars, falling back to the legacy ``HOST``/``PORT``.
+
+    The new contract is ``MCP_HTTP_HOST``/``MCP_HTTP_PORT`` (supportBot sets
+    these). The pre-existing Docker/desktop commands still set only
+    ``PORT=3100``/``HOST=0.0.0.0`` (Dockerfile, docker-compose.yaml — owned by a
+    later task), so the compatibility launcher must keep them working. This
+    helper injects the legacy values (and their historical defaults) into the
+    mapping passed to :func:`load_config`; ``config.py`` itself still validates
+    the resolved host/port, so a genuinely missing bind setting still fails
+    fast.
+    """
+    env = dict(os.environ if environ is None else environ)
+    if not (env.get("MCP_HTTP_HOST") or "").strip():
+        env["MCP_HTTP_HOST"] = (env.get("HOST") or "").strip() or "0.0.0.0"
+    if not (env.get("MCP_HTTP_PORT") or "").strip():
+        env["MCP_HTTP_PORT"] = (env.get("PORT") or "").strip() or "3100"
+    return env
 
 
 def create_app() -> Starlette:
@@ -60,7 +82,7 @@ class _BedolagaHTTPServer(uvicorn.Server):
 
 def run() -> None:
     """Run the HTTP transport until SIGTERM/SIGINT, then shut down gracefully."""
-    config = load_config()
+    config = load_config(environ=_bind_environ())
     app = create_app()
     server = _BedolagaHTTPServer(
         uvicorn.Config(
