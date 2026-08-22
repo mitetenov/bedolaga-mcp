@@ -7,16 +7,25 @@ on:
     branches: [main, master]
 
 jobs:
-  test:
+  smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Run tests
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+      - name: Install runtime dependencies
+        run: pip install --no-cache-dir -r requirements.txt
+      - name: Smoke check package and tool registry
+        # Real check: fails the job when the package is broken. There is no
+        # pytest suite by design (no test files), so this verifies the package
+        # imports and exposes exactly the three required tools.
         run: |
-          python3 -m pytest tests/ -v || echo "No tests yet — skipping"
+          python -c "import bedolaga_mcp; from bedolaga_mcp.tools import list_tools; names={t['name'] for t in list_tools()}; assert names == {'bedolaga_user_get','bedolaga_billing_get','bedolaga_referrals_get'}, names"
 
   build-and-push:
-    needs: test
+    needs: smoke
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
@@ -26,8 +35,15 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push
+      - name: Read package version
+        id: version
+        run: |
+          VER=$(python3 -c "from bedolaga_mcp import __version__; print(__version__)")
+          echo "tag=$VER" >> "$GITHUB_OUTPUT"
+      - name: Build and push (immutable commit tag + version tag, no latest)
         uses: docker/build-push-action@v7
         with:
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/bedolaga-mcp:${{ github.sha }},${{ secrets.DOCKERHUB_USERNAME }}/bedolaga-mcp:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/bedolaga-mcp:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/bedolaga-mcp:${{ steps.version.outputs.tag }}

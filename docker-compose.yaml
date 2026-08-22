@@ -1,12 +1,32 @@
 services:
   bedolaga-mcp:
     build: .
-    ports:
-      - "3100:3100"
+    # Internal-only: supportBot reaches the MCP server over the internal
+    # Docker network. Port 3100 is NOT published to the host in production.
+    #
+    # LOCAL DEVELOPMENT ONLY — bind to loopback on the host by uncommenting:
+    # ports:
+    #   - "127.0.0.1:3100:3100"
     environment:
-      - BEDOLAGA_API_URL=${BEDOLAGA_API_URL}
-      - BEDOLAGA_API_KEY=${BEDOLAGA_API_KEY}
-      - PORT=3100
-      - HOST=0.0.0.0
+      # Passed through from .env (required; compose fails fast if unset).
+      - BEDOLAGA_API_URL=${BEDOLAGA_API_URL:?set BEDOLAGA_API_URL in .env}
+      - BEDOLAGA_API_KEY=${BEDOLAGA_API_KEY:?set BEDOLAGA_API_KEY in .env}
+      - BEDOLAGA_TIMEOUT_MS=${BEDOLAGA_TIMEOUT_MS:-10000}
+      # Bind settings for the HTTP transport. Legacy HOST/PORT are REMOVED
+      # migration settings — new deployments must set MCP_HTTP_HOST/MCP_HTTP_PORT
+      # (the launcher keeps a temporary compatibility fallback only).
+      - MCP_HTTP_HOST=0.0.0.0
+      - MCP_HTTP_PORT=3100
+    healthcheck:
+      # Liveness: GET /health must return 200. Non-zero exit if the process is
+      # alive but not serving.
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3100/health', timeout=5)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # Bounded restart: retry at most 5 times on non-zero exit, then stop so a
+    # crash-loop caused by a config/startup error surfaces to the operator
+    # instead of restarting forever (the previous unless-stopped masked it).
+    restart: on-failure:5
     command: python3 http_server.py
-    restart: unless-stopped
