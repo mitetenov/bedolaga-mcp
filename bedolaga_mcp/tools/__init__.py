@@ -54,7 +54,6 @@ __all__ = [
     "call_tool",
     "close_client",
     "list_tools",
-    "make_error",
     "register_tools",
 ]
 
@@ -269,19 +268,3 @@ def register_tools(server: Any) -> None:
             name=tool["name"],
             description=tool["description"],
         )
-
-
-def make_error(
-    tool: str,
-    code: str,
-    message: str,
-    retryable: bool | None = None,
-) -> dict[str, Any]:
-    """Legacy entrypoint-level error helper.
-
-    Kept only because the legacy stdio entrypoint imports it; it delegates to
-    :func:`contracts.make_error_envelope`, so every error envelope still comes
-    from the single contracts source and the ``retryable`` flag is always
-    derived from the fixed catalog.
-    """
-    return make_error_envelope(tool, code, message, retryable)

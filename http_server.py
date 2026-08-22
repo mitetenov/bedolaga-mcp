@@ -1,27 +1,14 @@
 #!/usr/bin/env python3
-"""MCP StreamableHTTP server for Bedolaga — serves the three read-only Bedolaga tools over HTTP on port 3100."""
+"""Thin compatibility launcher for the Streamable HTTP transport.
 
-import os
+Starts the sessionful Streamable HTTP server on ``/`` (same lifecycle as the
+mcp-remnawave server supportBot already uses). All server logic lives in
+:mod:`bedolaga_mcp`; this file exists so existing Docker/desktop commands that
+run ``python3 http_server.py`` keep working. Configuration is read from the
+environment via :func:`bedolaga_mcp.config.load_config`.
+"""
 
-import uvicorn
-from mcp.server.fastmcp import FastMCP
-
-from bedolaga_mcp.tools import register_tools
-
-
-# Create the FastMCP server
-mcp = FastMCP(
-    name="bedolaga-mcp",
-    json_response=True,
-    stateless_http=False,
-    streamable_http_path="/mcp",
-)
-
-# Register the single public tool contract (name, description, handler).
-register_tools(mcp)
-
+from bedolaga_mcp.http import run
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 3100))
-    host = os.environ.get("HOST", "0.0.0.0")
-    uvicorn.run(mcp.streamable_http_app(), host=host, port=port, log_level="info")
+    run()
