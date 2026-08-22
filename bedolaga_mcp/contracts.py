@@ -19,7 +19,9 @@ anywhere in the process. It owns:
   description text) and the ``purchased_after_latest_deposit`` signal with an
   explicit indeterminate value when no completed deposit exists;
 * the safe bot-side subscription record shape: ``status`` is renamed to
-  ``bot_record_status`` and every record carries a fixed Remnawave note, while
+  ``bot_record_status`` and the upstream locally-derived effective status is
+  renamed to ``bot_record_effective_status`` (both bot-side, not panel state),
+  and every record carries a fixed Remnawave note, while
   subscription_url / subscription_crypto_link / connected_squads / traffic /
   device limits are excluded.
 
@@ -328,16 +330,19 @@ BOT_RECORD_NOTE: Final = (
 def bot_subscription_record(raw_sub: Any) -> dict[str, Any] | None:
     """Normalize one raw SubscriptionSummary into a safe bot-side record.
 
-    ``status`` is renamed to ``bot_record_status`` and a fixed Remnawave note is
-    attached. subscription_url, subscription_crypto_link, connected_squads,
-    traffic_limit_gb, traffic_used_gb and device_limit are excluded here.
+    ``status`` is renamed to ``bot_record_status`` and the upstream
+    locally-derived effective status is renamed to
+    ``bot_record_effective_status`` (both are bot-side, not panel state); a
+    fixed Remnawave note is attached. subscription_url,
+    subscription_crypto_link, connected_squads, traffic_limit_gb,
+    traffic_used_gb and device_limit are excluded here.
     """
     if not isinstance(raw_sub, dict):
         return None
     return {
         "id": raw_sub.get("id"),
         "bot_record_status": raw_sub.get("status"),
-        "actual_status": raw_sub.get("actual_status"),
+        "bot_record_effective_status": raw_sub.get("actual_status"),
         "is_trial": raw_sub.get("is_trial"),
         "start_date": raw_sub.get("start_date"),
         "end_date": raw_sub.get("end_date"),
