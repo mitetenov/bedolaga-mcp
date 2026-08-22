@@ -5,7 +5,9 @@ imports no client, config or tools code, so it is trivially safe and reusable
 anywhere in the process. It owns:
 
 * the single success/error envelope shapes from the spec, so no tool layer
-  ever composes an envelope (or an error message) by hand;
+  ever composes an envelope (or an error message) by hand, plus the fixed
+  error-code catalog (``ERROR_CODES`` / ``ERROR_RETRYABLE``) with per-code
+  retryable flags aligned one-to-one with :mod:`bedolaga_mcp.errors`;
 * money normalization to ``*_kopeks`` / ``*_rubles`` pairs — integer kopeks is
   always the source of truth and rubles are always derived as ``kopeks / 100``;
   the ambiguous float ``amount`` / ``*_rubles`` fields are never used as truth;
@@ -30,8 +32,22 @@ from __future__ import annotations
 
 from typing import Any, Final
 
+from .errors import SPEC_ERROR_CODES
+
 #: Identifier of this MCP server inside every envelope.
 SOURCE: Final = "bedolaga-mcp"
+
+# --- Error-code catalog -----------------------------------------------------
+
+#: The ten fixed error codes from the spec, as the authoritative frozenset.
+#: Derived from :data:`bedolaga_mcp.errors.SPEC_ERROR_CODES` so the tool layer
+#: and the error layer can never drift.
+ERROR_CODES: Final[frozenset[str]] = frozenset(SPEC_ERROR_CODES)
+
+#: Fixed per-code retryable flag. Also derived from
+#: :data:`bedolaga_mcp.errors.SPEC_ERROR_CODES`; ``make_error_envelope`` uses
+#: this as the single source of the flag so no call site can disagree.
+ERROR_RETRYABLE: Final[dict[str, bool]] = dict(SPEC_ERROR_CODES)
 
 # --- Envelopes -------------------------------------------------------------
 
@@ -55,9 +71,23 @@ def make_error_envelope(
     tool: str,
     code: str,
     message: str,
-    retryable: bool = False,
+    retryable: bool | None = None,
 ) -> dict[str, Any]:
-    """Build the single error envelope shape from the spec."""
+    """Build the single error envelope shape from the spec.
+
+    ``code`` must be one of the ten fixed error codes from
+    :data:`ERROR_CODES`; an unknown code raises :class:`ValueError`. The
+    ``retryable`` flag is always derived from :data:`ERROR_RETRYABLE`, so every
+    call site agrees per code; passing a conflicting value raises
+    :class:`ValueError` instead of silently drifting.
+    """
+    if code not in ERROR_RETRYABLE:
+        raise ValueError(f"unknown error code: {code!r}")
+    derived = ERROR_RETRYABLE[code]
+    if retryable is not None and retryable != derived:
+        raise ValueError(
+            f"retryable flag for {code!r} is fixed to {derived!r}"
+        )
     return {
         "ok": False,
         "source": SOURCE,
@@ -65,7 +95,7 @@ def make_error_envelope(
         "error": {
             "code": code,
             "message": message,
-            "retryable": retryable,
+            "retryable": derived,
         },
     }
 
@@ -357,6 +387,8 @@ __all__ = [
     "BOT_RECORD_NOTE",
     "CREDIT_TYPES",
     "DEBIT_TYPES",
+    "ERROR_CODES",
+    "ERROR_RETRYABLE",
     "REFERRAL_META_NOTE",
     "SOURCE",
     "TRANSACTION_CATEGORIES",
