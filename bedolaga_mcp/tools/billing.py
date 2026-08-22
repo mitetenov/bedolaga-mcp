@@ -1,14 +1,18 @@
 """Real handler for the read-only ``bedolaga_billing_get`` tool.
 
-Resolves the caller by Telegram ID, resolves the internal user id on the
-server side, fetches a bounded transaction history (see
-:func:`_fetch_billing_history` for the documented strategy) and returns the
-sanitized billing payload: balance, recent transactions capped at ``limit``,
-the latest-completed deposit / subscription-purchase summaries,
-``purchased_after_latest_deposit`` and the bot-side subscription records.
+Resolves the caller by a system-pinned identity — exactly one of a positive
+``telegram_id`` or the internal Bedolaga ``user_id`` (used for email-only
+cabinet tickets) — then resolves the internal user id on the server side,
+fetches a bounded transaction history (see :func:`_fetch_billing_history` for
+the documented strategy) and returns the sanitized billing payload: balance,
+recent transactions capped at ``limit``, the latest-completed deposit /
+subscription-purchase summaries, ``purchased_after_latest_deposit`` and the
+bot-side subscription records.
 
-The handler is read-only and makes no write requests. All error mapping happens
-in the registry; :func:`require_internal_id` raises
+The identity never comes from the model: both or neither argument raises
+:class:`~bedolaga_mcp.errors.InvalidInputError`. The handler is read-only and
+makes no write requests. All error mapping happens in the registry;
+:func:`require_internal_id` raises
 :class:`~bedolaga_mcp.errors.IdentityUnavailableError` when the resolved user
 has no usable internal id, which becomes an ``identity_unavailable`` envelope.
 """
@@ -19,6 +23,7 @@ from typing import Any
 
 from ..client import BedolagaClient
 from ..contracts import make_success_envelope
+from ..errors import InvalidInputError
 from ..sanitize import sanitize_billing
 from . import require_internal_id
 
@@ -30,19 +35,29 @@ __all__ = ["bedolaga_billing_get"]
 
 async def bedolaga_billing_get(
     client: BedolagaClient,
-    telegram_id: int,
+    *,
+    telegram_id: int | None = None,
+    user_id: int | None = None,
     limit: int = 20,
 ) -> dict[str, Any]:
     """Return balance, recent financial events and bot-side purchase records.
 
-    ``client`` is injected by the registry. ``limit`` is already bounded to
+    ``client`` is injected by the registry. Exactly one of ``telegram_id``
+    (positive Telegram ID) or ``user_id`` (internal Bedolaga id) is required;
+    both or neither raises ``invalid_input``. ``limit`` is already bounded to
     1..50 by the pydantic schema derived from the registered handler. The flow
-    is: one user resolution by Telegram ID → internal user id → a bounded
-    transaction fetch → the sanitizer → the success envelope.
+    is: one user resolution → internal user id → a bounded transaction fetch →
+    the sanitizer → the success envelope.
     """
-    raw_user = await client.get_user_by_telegram_id(telegram_id)
-    user_id = require_internal_id(raw_user)
-    history = await _fetch_billing_history(client, user_id)
+    if (telegram_id is None) == (user_id is None):
+        raise InvalidInputError("Provide exactly one of telegram_id or user_id")
+    raw_user = (
+        await client.get_user_by_telegram_id(telegram_id)
+        if telegram_id is not None
+        else await client.get_user_by_id(user_id)
+    )
+    owner_id = require_internal_id(raw_user)
+    history = await _fetch_billing_history(client, owner_id)
     data = sanitize_billing(raw_user, history, limit)
     return make_success_envelope("bedolaga_billing_get", data)
 

@@ -61,10 +61,11 @@ __all__ = [
 def require_internal_id(raw_user: Any) -> int:
     """Return the owner's internal user id or raise IdentityUnavailableError.
 
-    The tools resolve by Telegram ID first, then use the returned internal id
-    for transactions / referrer lookups. When the resolved user has no usable
-    internal id (missing, or not a positive integer), no downstream call is
-    made and the tool returns ``identity_unavailable`` instead of guessing.
+    The tools resolve the caller by a pinned identity (Telegram ID or internal
+    user id), then use the returned internal id for transactions / referrer
+    lookups. When the resolved user has no usable internal id (missing, or not
+    a positive integer), no downstream call is made and the tool returns
+    ``identity_unavailable`` instead of guessing.
     """
     user_id = raw_user.get("id") if isinstance(raw_user, dict) else None
     if isinstance(user_id, bool) or not isinstance(user_id, int) or user_id <= 0:
@@ -141,33 +142,40 @@ async def close_client() -> None:
 # --- Public wrappers (clean annotations define the input schemas) ----------
 
 
-async def _user_get_handler(telegram_id: int) -> dict[str, Any]:
+async def _user_get_handler(
+    telegram_id: int | None = None,
+    user_id: int | None = None,
+) -> dict[str, Any]:
     return await _run(
         user.bedolaga_user_get,
         _get_client,
         "bedolaga_user_get",
-        {"telegram_id": telegram_id},
+        {"telegram_id": telegram_id, "user_id": user_id},
     )
 
 
 async def _billing_get_handler(
-    telegram_id: int,
+    telegram_id: int | None = None,
+    user_id: int | None = None,
     limit: Annotated[int, Field(default=20, ge=1, le=50)] = 20,
 ) -> dict[str, Any]:
     return await _run(
         billing.bedolaga_billing_get,
         _get_client,
         "bedolaga_billing_get",
-        {"telegram_id": telegram_id, "limit": limit},
+        {"telegram_id": telegram_id, "user_id": user_id, "limit": limit},
     )
 
 
-async def _referrals_get_handler(telegram_id: int) -> dict[str, Any]:
+async def _referrals_get_handler(
+    telegram_id: int | None = None,
+    user_id: int | None = None,
+) -> dict[str, Any]:
     return await _run(
         referrals.bedolaga_referrals_get,
         _get_client,
         "bedolaga_referrals_get",
-        {"telegram_id": telegram_id},
+        {"telegram_id": telegram_id, "user_id": user_id},
     )
 
 
@@ -175,11 +183,14 @@ _TOOLS: tuple[dict[str, Any], ...] = (
     {
         "name": "bedolaga_user_get",
         "description": (
-            "Read-only. Get the current user's Bedolaga account and balance by "
-            "Telegram ID. A balance credit (deposit) is NOT a purchase — only a "
-            "completed subscription_payment confirms a purchase. This tool does "
-            "not know the VPN panel status; panel truth is checked via the "
-            "separate Remnawave MCP."
+            "Read-only. Get the current user's Bedolaga account and balance. "
+            "Identity is pinned by the system, never by the caller: provide "
+            "exactly one of telegram_id (positive Telegram ID) or user_id "
+            "(internal Bedolaga id for email-only cabinet tickets). A balance "
+            "credit (deposit) is NOT a purchase — only a completed "
+            "subscription_payment confirms a purchase. This tool does not know "
+            "the VPN panel status; panel truth is checked via the separate "
+            "Remnawave MCP."
         ),
         "handler": _user_get_handler,
         "impl": user.bedolaga_user_get,
@@ -189,11 +200,13 @@ _TOOLS: tuple[dict[str, Any], ...] = (
         "description": (
             "Read-only. One call to see balance, recent financial events and "
             "internal Bedolaga purchase records so a top-up can be told apart "
-            "from a purchase. deposit means a balance credit, not a purchase; "
-            "only a completed subscription_payment confirms a purchase. The "
-            "internal bot-side record status (bot_record_status) is NOT the VPN "
-            "panel status — panel truth is checked via the separate Remnawave "
-            "MCP."
+            "from a purchase. Identity is pinned by the system, never by the "
+            "caller: provide exactly one of telegram_id (positive Telegram ID) "
+            "or user_id (internal Bedolaga id for email-only cabinet tickets). "
+            "deposit means a balance credit, not a purchase; only a completed "
+            "subscription_payment confirms a purchase. The internal bot-side "
+            "record status (bot_record_status) is NOT the VPN panel status — "
+            "panel truth is checked via the separate Remnawave MCP."
         ),
         "handler": _billing_get_handler,
         "impl": billing.bedolaga_billing_get,
@@ -202,9 +215,12 @@ _TOOLS: tuple[dict[str, Any], ...] = (
         "name": "bedolaga_referrals_get",
         "description": (
             "Read-only. Get the current user's referral summary in Bedolaga: "
-            "referral code, invitee counts and earnings, without any third-party "
-            "personal data. Subscription and VPN panel status are checked via the "
-            "separate Remnawave MCP."
+            "referral code, invitee counts and earnings, without any "
+            "third-party personal data. Identity is pinned by the system, never "
+            "by the caller: provide exactly one of telegram_id (positive "
+            "Telegram ID) or user_id (internal Bedolaga id for email-only "
+            "cabinet tickets). Subscription and VPN panel status are checked "
+            "via the separate Remnawave MCP."
         ),
         "handler": _referrals_get_handler,
         "impl": referrals.bedolaga_referrals_get,

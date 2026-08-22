@@ -59,6 +59,11 @@ class BedolagaClient:
         self._require_id("telegram_id", telegram_id)
         return await self._get(f"/users/by-telegram-id/{telegram_id}")
 
+    async def get_user_by_id(self, user_id: int) -> dict[str, Any]:
+        """GET /users/{user_id} → UserResponse (internal Bedolaga user id)."""
+        self._require_id("user_id", user_id)
+        return await self._get(f"/users/{user_id}")
+
     async def list_transactions(
         self,
         user_id: int,
