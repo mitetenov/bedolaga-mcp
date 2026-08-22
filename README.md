@@ -1,38 +1,26 @@
 # Bedolaga MCP Server
 
-MCP-сервер для получения баланса пользователя из [Bedolaga Bot](https://github.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot) по Telegram ID.
+MCP-сервер для получения пользовательских фактов из [Bedolaga Bot](https://github.com/BEDOLAGA-DEV/remnawave-bedolaga-telegram-bot) по Telegram ID.
+
+## Breaking migration (1.0.0)
+
+Начиная с версии **1.0.0** публичный контракт инструментов изменён, а старые имена **удалены**. Обновите конфигурацию клиента:
+
+| Старый инструмент | Что вместо него |
+|---|---|
+| `bedolaga_balance` | заменён на `bedolaga_user_get` |
+| `bedolaga_transactions` | заменён на `bedolaga_billing_get` |
+| `bedolaga_subscription` | **не имеет аналога в Bedolaga MCP**. Фактический статус подписки и состояние VPN-панели проверяются через отдельный [mcp-remnawave](https://github.com/mitetenov/mcp-remnawave), а не через этот сервер |
+
+Версия 1.0.0 — первый контракт с корректными API routes, structured результатами и явной границей ответственности с Remnawave. Все инструменты **readonly**: через Bedolaga MCP нельзя менять баланс, создавать или продлевать подписки, применять промокоды, оформлять возвраты или выполнять иные действия от имени пользователя.
 
 ## Инструменты (Tools)
 
 Сервер предоставляет три инструмента, доступных через MCP-протокол. Все инструменты **readonly** — данные не изменяются.
 
-### `bedolaga_balance`
+### `bedolaga_user_get`
 
-Получить баланс пользователя в рублях по Telegram ID.
-
-**Параметры:**
-
-| Параметр | Тип | Обязательный | Описание |
-|---|---|---|---|
-| `telegram_id` | `int` | Да | Telegram ID пользователя |
-
-**Возвращает:** строку вида `💰 username: 150.00 ₽ (status: active)`
-
-**Вызов через JSON-RPC:**
-
-```json
-{
-  "method": "tools/call",
-  "params": {
-    "name": "bedolaga_balance",
-    "arguments": { "telegram_id": 123456789 }
-  }
-}
-```
-
-### `bedolaga_subscription`
-
-Получить статус подписки пользователя по Telegram ID.
+Получить аккаунт и баланс текущего пользователя Bedolaga по Telegram ID.
 
 **Параметры:**
 
@@ -40,23 +28,24 @@ MCP-сервер для получения баланса пользовател
 |---|---|---|---|
 | `telegram_id` | `int` | Да | Telegram ID пользователя |
 
-**Возвращает:** строку вида `📋 username: tariff=pro, period=monthly, ✅ active`
+**Назначение:** пополнение баланса (`deposit`) не является покупкой — покупку подтверждает только завершённая операция `subscription_payment`. Инструмент не знает фактический статус VPN-панели: он проверяется через отдельный Remnawave MCP.
 
-**Вызов через JSON-RPC:**
+### `bedolaga_billing_get`
 
-```json
-{
-  "method": "tools/call",
-  "params": {
-    "name": "bedolaga_subscription",
-    "arguments": { "telegram_id": 123456789 }
-  }
-}
-```
+Одним вызовом показать баланс, недавние финансовые события и внутренние записи покупок Bedolaga.
 
-### `bedolaga_transactions`
+**Параметры:**
 
-Получить историю пополнений пользователя по Telegram ID.
+| Параметр | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `telegram_id` | `int` | Да | Telegram ID пользователя |
+| `limit` | `int` | Нет | Лимит операций (по умолчанию 20, максимум 50) |
+
+**Важно:** `deposit` означает зачисление на баланс; покупку подтверждает только завершённый `subscription_payment`. Внутренний статус записи бота (`bot_record_status`) — это **не** статус VPN-панели; фактическое состояние панели проверяется через отдельный Remnawave MCP.
+
+### `bedolaga_referrals_get`
+
+Получить реферальную сводку текущего пользователя.
 
 **Параметры:**
 
@@ -64,25 +53,16 @@ MCP-сервер для получения баланса пользовател
 |---|---|---|---|
 | `telegram_id` | `int` | Да | Telegram ID пользователя |
 
-**Возвращает:** многострочную строку со списком транзакций:
+**Назначение:** реферальный код, количество приглашённых и начисления владельца аккаунта без персональных данных третьих лиц.
 
-```
-📋 username — transactions:
-  • 500.00 ₽ — Пополнение баланса (2024-01-15T12:00:00)
-  • 1000.00 ₽ — Пополнение баланса (2024-01-20T18:30:00)
-```
+## Формат результата
 
-**Вызов через JSON-RPC:**
+Каждый инструмент возвращает JSON в текстовом MCP content с единой оболочкой:
 
-```json
-{
-  "method": "tools/call",
-  "params": {
-    "name": "bedolaga_transactions",
-    "arguments": { "telegram_id": 123456789 }
-  }
-}
-```
+- успех: `ok: true`, `source`, `tool`, `data`, `meta`;
+- ошибка: `ok: false`, `source`, `tool`, `error.code`, безопасный `error.message`, `error.retryable`.
+
+Сырое тело ответа Bedolaga API и исключения Python модели не возвращаются. Инструменты не возвращают ссылку подписки, crypto link, ключи, email, внешние платёжные ID, receipt-идентификаторы, Remnawave-идентификаторы и персональные данные рефералов.
 
 ## Транспорты
 
@@ -212,23 +192,23 @@ curl -s -X POST http://localhost:3100/mcp \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":2}'
 
 # Вызов инструментов
-# Баланс
+# Пользователь и баланс
 curl -s -X POST http://localhost:3100/mcp \
   -H "Content-Type: application/json" \
   -H "Mcp-Session-Id: <SESSION_ID>" \
-  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"bedolaga_balance","arguments":{"telegram_id":123456789}},"id":3}'
+  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"bedolaga_user_get","arguments":{"telegram_id":123456789}},"id":3}'
 
-# Подписка
+# Биллинг (операции и внутренние записи покупок)
 curl -s -X POST http://localhost:3100/mcp \
   -H "Content-Type: application/json" \
   -H "Mcp-Session-Id: <SESSION_ID>" \
-  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"bedolaga_subscription","arguments":{"telegram_id":123456789}},"id":4}'
+  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"bedolaga_billing_get","arguments":{"telegram_id":123456789,"limit":20}},"id":4}'
 
-# Транзакции
+# Реферальная сводка
 curl -s -X POST http://localhost:3100/mcp \
   -H "Content-Type: application/json" \
   -H "Mcp-Session-Id: <SESSION_ID>" \
-  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"bedolaga_transactions","arguments":{"telegram_id":123456789}},"id":5}'
+  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"bedolaga_referrals_get","arguments":{"telegram_id":123456789}},"id":5}'
 ```
 
 ### Stdio (legacy транспорт)
