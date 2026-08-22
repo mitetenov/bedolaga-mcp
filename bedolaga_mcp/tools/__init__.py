@@ -5,60 +5,171 @@ HTTP in ``http_server.py``) list and register tools exclusively through this
 module. No other module owns tool names, descriptions, input schemas or
 handlers, so HTTP and stdio can never drift apart.
 
-The tool handlers below are **interim stubs**: they return the unified error
-envelope from the spec and are replaced by the real Bedolaga API logic in a
-later task. The error message never contains internal URLs, secrets or raw
-upstream bodies.
+The three real read-only handlers live in :mod:`~bedolaga_mcp.tools.user`,
+:mod:`~bedolaga_mcp.tools.billing` and :mod:`~bedolaga_mcp.tools.referrals`.
+Each handler is an async function whose first argument is the
+:class:`~bedolaga_mcp.client.BedolagaClient` (dependency injection, "Option B");
+this registry injects the client and maps every domain exception onto the
+unified error envelope from :mod:`bedolaga_mcp.contracts` — the tool layer
+never composes an error message by hand.
+
+Client lifecycle
+----------------
+The registry owns the Bedolaga client so the entrypoints stay unchanged. The
+client is created **lazily** on the first tool call (importing this module has
+no side effects) and can be closed on shutdown via :func:`close_client` (a
+later task wires it into the server lifespan):
+
+* **FastMCP / HTTP path** (``register_tools``): handlers receive the shared
+  process-lifetime client created by :func:`_get_client`. One connection pool
+  serves every request on the server's single event loop.
+
+* **Legacy stdio path** (``call_tool``): the stdio loop is synchronous and runs
+  each request inside a fresh ``asyncio.run`` event loop. An ``httpx`` client
+  cannot be reused across two ``asyncio.run`` loops (``RuntimeError: Event loop
+  is closed``), so ``call_tool`` creates a **fresh client per call** and closes
+  it in a ``finally``. This is a deliberate legacy-shim exception; a later task
+  migrates stdio onto the same shared client.
+
+Schemas are derived from the registered handler annotations via
+``func_metadata`` — the exact derivation FastMCP uses internally — so
+``list_tools``, ``call_tool`` and ``register_tools`` always agree on the input
+schema.
 """
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+import asyncio
+from typing import Annotated, Any, Callable
 
 from mcp.server.fastmcp.utilities.func_metadata import func_metadata
 from pydantic import Field
 
-__all__ = ["list_tools", "register_tools", "call_tool", "make_error"]
+from ..client import BedolagaClient
+from ..config import load_config
+from ..contracts import make_error_envelope
+from ..errors import BedolagaError, IdentityUnavailableError, InternalError
 
-_SOURCE = "bedolaga-mcp"
-_INTERIM_MESSAGE = "Bedolaga Web API integration is not implemented yet"
+__all__ = [
+    "call_tool",
+    "close_client",
+    "list_tools",
+    "make_error",
+    "register_tools",
+]
 
 
-def make_error(
-    tool: str,
-    code: str,
-    message: str,
-    retryable: bool = False,
+def require_internal_id(raw_user: Any) -> int:
+    """Return the owner's internal user id or raise IdentityUnavailableError.
+
+    The tools resolve by Telegram ID first, then use the returned internal id
+    for transactions / referrer lookups. When the resolved user has no usable
+    internal id (missing, or not a positive integer), no downstream call is
+    made and the tool returns ``identity_unavailable`` instead of guessing.
+    """
+    user_id = raw_user.get("id") if isinstance(raw_user, dict) else None
+    if isinstance(user_id, bool) or not isinstance(user_id, int) or user_id <= 0:
+        raise IdentityUnavailableError(
+            "User identity cannot be resolved to a Bedolaga account"
+        )
+    return user_id
+
+
+from . import billing, referrals, user  # noqa: E402  (helpers above must exist first)
+
+
+def error_envelope(exc: BaseException, tool: str) -> dict[str, Any]:
+    """Map one exception to the unified error envelope from the spec.
+
+    Domain exceptions keep their fixed ``code`` and catalog ``retryable`` flag
+    plus a safe ``exc.message``; ``exc.detail`` (a bounded upstream snippet) is
+    never shown to the model. Unexpected exceptions become a non-retryable
+    ``internal_error`` with a generic message.
+    """
+    if isinstance(exc, BedolagaError):
+        return make_error_envelope(tool, exc.code, exc.message, exc.retryable)
+    return make_error_envelope(tool, "internal_error", "Internal error")
+
+
+async def _run(
+    impl: Callable[..., Any],
+    client_provider: Callable[[], BedolagaClient],
+    tool_name: str,
+    arguments: dict[str, Any],
+    *,
+    close: bool = False,
 ) -> dict[str, Any]:
-    """Build the unified error envelope from the spec."""
-    return {
-        "ok": False,
-        "source": _SOURCE,
-        "tool": tool,
-        "error": {
-            "code": code,
-            "message": message,
-            "retryable": retryable,
-        },
-    }
+    """Run one real handler with an injected client, mapping errors to envelopes."""
+    client: BedolagaClient | None = None
+    try:
+        client = client_provider()
+        return await impl(client, **arguments)
+    except BedolagaError as exc:
+        return error_envelope(exc, tool_name)
+    except Exception:
+        return error_envelope(InternalError("Internal error"), tool_name)
+    finally:
+        if close and client is not None:
+            await client.aclose()
 
 
-def bedolaga_user_get(telegram_id: int) -> dict[str, Any]:
-    """INTERIM STUB — real implementation lands in a later task."""
-    return make_error("bedolaga_user_get", "internal_error", _INTERIM_MESSAGE)
+# --- Client lifecycle -------------------------------------------------------
+
+_client_state: dict[str, BedolagaClient] = {}
 
 
-def bedolaga_billing_get(
+def _make_client() -> BedolagaClient:
+    """Create a client from the current environment configuration."""
+    return BedolagaClient(load_config())
+
+
+def _get_client() -> BedolagaClient:
+    """Lazily create and return the shared process-lifetime client."""
+    client = _client_state.get("client")
+    if client is None:
+        client = _make_client()
+        _client_state["client"] = client
+    return client
+
+
+async def close_client() -> None:
+    """Close the shared client if it was created (safe to call any time)."""
+    client = _client_state.pop("client", None)
+    if client is not None:
+        await client.aclose()
+
+
+# --- Public wrappers (clean annotations define the input schemas) ----------
+
+
+async def _user_get_handler(telegram_id: int) -> dict[str, Any]:
+    return await _run(
+        user.bedolaga_user_get,
+        _get_client,
+        "bedolaga_user_get",
+        {"telegram_id": telegram_id},
+    )
+
+
+async def _billing_get_handler(
     telegram_id: int,
     limit: Annotated[int, Field(default=20, ge=1, le=50)] = 20,
 ) -> dict[str, Any]:
-    """INTERIM STUB — real implementation lands in a later task."""
-    return make_error("bedolaga_billing_get", "internal_error", _INTERIM_MESSAGE)
+    return await _run(
+        billing.bedolaga_billing_get,
+        _get_client,
+        "bedolaga_billing_get",
+        {"telegram_id": telegram_id, "limit": limit},
+    )
 
 
-def bedolaga_referrals_get(telegram_id: int) -> dict[str, Any]:
-    """INTERIM STUB — real implementation lands in a later task."""
-    return make_error("bedolaga_referrals_get", "internal_error", _INTERIM_MESSAGE)
+async def _referrals_get_handler(telegram_id: int) -> dict[str, Any]:
+    return await _run(
+        referrals.bedolaga_referrals_get,
+        _get_client,
+        "bedolaga_referrals_get",
+        {"telegram_id": telegram_id},
+    )
 
 
 _TOOLS: tuple[dict[str, Any], ...] = (
@@ -71,7 +182,8 @@ _TOOLS: tuple[dict[str, Any], ...] = (
             "not know the VPN panel status; panel truth is checked via the "
             "separate Remnawave MCP."
         ),
-        "handler": bedolaga_user_get,
+        "handler": _user_get_handler,
+        "impl": user.bedolaga_user_get,
     },
     {
         "name": "bedolaga_billing_get",
@@ -84,7 +196,8 @@ _TOOLS: tuple[dict[str, Any], ...] = (
             "panel status — panel truth is checked via the separate Remnawave "
             "MCP."
         ),
-        "handler": bedolaga_billing_get,
+        "handler": _billing_get_handler,
+        "impl": billing.bedolaga_billing_get,
     },
     {
         "name": "bedolaga_referrals_get",
@@ -94,7 +207,8 @@ _TOOLS: tuple[dict[str, Any], ...] = (
             "personal data. Subscription and VPN panel status are checked via the "
             "separate Remnawave MCP."
         ),
-        "handler": bedolaga_referrals_get,
+        "handler": _referrals_get_handler,
+        "impl": referrals.bedolaga_referrals_get,
     },
 )
 
@@ -125,17 +239,26 @@ def list_tools() -> list[dict[str, Any]]:
 def call_tool(name: str, arguments: dict[str, Any]) -> Any:
     """Dispatch a ``tools/call`` through the registry handler.
 
-    Arguments are validated with the same pydantic model FastMCP uses.
+    Arguments are validated with the same pydantic model FastMCP uses, then the
+    real handler runs on a fresh per-call client (see the module docstring).
     Raises :class:`KeyError` for unknown tool names and pydantic
-    ``ValidationError`` for invalid arguments; callers decide how to map
-    those onto the error envelope.
+    ``ValidationError`` for invalid arguments; callers decide how to map those
+    onto the error envelope.
     """
     tool = _BY_NAME.get(name)
     if tool is None:
         raise KeyError(f"Unknown tool: {name}")
     arg_model = func_metadata(tool["handler"]).arg_model
     validated = arg_model.model_validate(arguments or {})
-    return tool["handler"](**validated.model_dump())
+    return asyncio.run(
+        _run(
+            tool["impl"],
+            _make_client,
+            tool["name"],
+            validated.model_dump(),
+            close=True,
+        )
+    )
 
 
 def register_tools(server: Any) -> None:
@@ -146,3 +269,19 @@ def register_tools(server: Any) -> None:
             name=tool["name"],
             description=tool["description"],
         )
+
+
+def make_error(
+    tool: str,
+    code: str,
+    message: str,
+    retryable: bool | None = None,
+) -> dict[str, Any]:
+    """Legacy entrypoint-level error helper.
+
+    Kept only because the legacy stdio entrypoint imports it; it delegates to
+    :func:`contracts.make_error_envelope`, so every error envelope still comes
+    from the single contracts source and the ``retryable`` flag is always
+    derived from the fixed catalog.
+    """
+    return make_error_envelope(tool, code, message, retryable)
