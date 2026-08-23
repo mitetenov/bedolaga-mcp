@@ -23,9 +23,8 @@ from typing import Any
 
 from ..client import BedolagaClient
 from ..contracts import make_success_envelope
-from ..errors import InvalidInputError
 from ..sanitize import sanitize_billing
-from . import require_internal_id
+from .identity import resolve_owner
 
 #: Largest single-page limit the upstream ``/transactions`` endpoint accepts.
 _UPSTREAM_PAGE_LIMIT: int = 200
@@ -49,17 +48,13 @@ async def bedolaga_billing_get(
     is: one user resolution → internal user id → a bounded transaction fetch →
     the sanitizer → the success envelope.
     """
-    if (telegram_id is None) == (user_id is None):
-        raise InvalidInputError("Provide exactly one of telegram_id or user_id")
-    raw_user = (
-        await client.get_user_by_telegram_id(telegram_id)
-        if telegram_id is not None
-        else await client.get_user_by_id(user_id)
+    raw_user, owner_id = await resolve_owner(
+        client, telegram_id=telegram_id, user_id=user_id
     )
-    owner_id = require_internal_id(raw_user)
     history = await _fetch_billing_history(client, owner_id)
     data = sanitize_billing(raw_user, history, limit)
     return make_success_envelope("bedolaga_billing_get", data)
+
 
 
 async def _fetch_billing_history(

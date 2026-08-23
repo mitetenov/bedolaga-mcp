@@ -59,23 +59,7 @@ __all__ = [
 ]
 
 
-def require_internal_id(raw_user: Any) -> int:
-    """Return the owner's internal user id or raise IdentityUnavailableError.
-
-    The tools resolve the caller by a pinned identity (Telegram ID or internal
-    user id), then use the returned internal id for transactions / referrer
-    lookups. When the resolved user has no usable internal id (missing, or not
-    a positive integer), no downstream call is made and the tool returns
-    ``identity_unavailable`` instead of guessing.
-    """
-    user_id = raw_user.get("id") if isinstance(raw_user, dict) else None
-    if isinstance(user_id, bool) or not isinstance(user_id, int) or user_id <= 0:
-        raise IdentityUnavailableError(
-            "User identity cannot be resolved to a Bedolaga account"
-        )
-    return user_id
-
-
+from .identity import require_internal_id
 from . import billing, referrals, user
 
 
