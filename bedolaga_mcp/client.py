@@ -102,9 +102,77 @@ class BedolagaClient:
         params["offset"] = offset
         return await self._get(f"/partners/referrers/{user_id}", params=params)
 
+    async def list_subscriptions(
+        self, user_id: int, limit: int = 200, offset: int = 0
+    ) -> list[dict[str, Any]]:
+        """GET /subscriptions?user_id=...&limit=...&offset=... → list of records."""
+        self._require_id("user_id", user_id)
+        self._require_limit("limit", limit)
+        self._require_offset("offset", offset)
+        return await self._get_list(
+            "/subscriptions",
+            params={"user_id": user_id, "limit": limit, "offset": offset},
+        )
+
+    async def list_tickets(
+        self, user_id: int, limit: int = 10, offset: int = 0
+    ) -> list[dict[str, Any]]:
+        """GET /tickets?user_id=...&limit=...&offset=... → list of ticket summaries."""
+        self._require_id("user_id", user_id)
+        self._require_limit("limit", limit)
+        self._require_offset("offset", offset)
+        return await self._get_list(
+            "/tickets",
+            params={"user_id": user_id, "limit": limit, "offset": offset},
+        )
+
+    async def list_promocodes(
+        self, limit: int = 200, offset: int = 0
+    ) -> dict[str, Any]:
+        """GET /promo-codes?limit=...&offset=... → PaginatedResponse[PromoCodeResponse]."""
+        self._require_limit("limit", limit)
+        self._require_offset("offset", offset)
+        return await self._get_object(
+            "/promo-codes",
+            params={"limit": limit, "offset": offset},
+        )
+
     async def _get(
         self, path: str, params: Mapping[str, Any] | None = None
     ) -> dict[str, Any]:
+        """Backward-compatible alias for :meth:`_get_object`."""
+        return await self._get_object(path, params=params)
+
+    async def _get_object(
+        self, path: str, params: Mapping[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Send one read-only GET and enforce that the JSON payload is an object."""
+        payload = await self._request_json(path, params=params)
+        if not isinstance(payload, dict):
+            raise InvalidUpstreamResponseError(
+                "Bedolaga API returned an unexpected response shape"
+            )
+        return payload
+
+    async def _get_list(
+        self, path: str, params: Mapping[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
+        """Send one read-only GET and enforce that the JSON payload is a list of objects."""
+        payload = await self._request_json(path, params=params)
+        if not isinstance(payload, list):
+            raise InvalidUpstreamResponseError(
+                "Bedolaga API returned an unexpected response shape"
+            )
+        for item in payload:
+            if not isinstance(item, dict):
+                raise InvalidUpstreamResponseError(
+                    "Bedolaga API returned an unexpected list item shape"
+                )
+        return payload
+
+    async def _request_json(
+        self, path: str, params: Mapping[str, Any] | None = None
+    ) -> Any:
         """Send one read-only GET and map every failure onto domain errors.
 
         The full URL is composed in this single place from the config-normalized
@@ -142,18 +210,12 @@ class BedolagaClient:
             )
 
         try:
-            payload = response.json()
+            return response.json()
         except ValueError as exc:
             raise InvalidUpstreamResponseError(
                 "Bedolaga API returned an invalid response",
                 detail=bounded_body(response.text),
             ) from exc
-
-        if not isinstance(payload, dict):
-            raise InvalidUpstreamResponseError(
-                "Bedolaga API returned an unexpected response shape"
-            )
-        return payload
 
     @staticmethod
     def _require_id(name: str, value: Any) -> None:
@@ -176,3 +238,4 @@ class BedolagaClient:
 
 
 __all__ = ["BedolagaClient"]
+
