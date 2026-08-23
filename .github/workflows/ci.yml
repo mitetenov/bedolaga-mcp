@@ -21,7 +21,8 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Smoke check package and tool registry
         run: |
-          python -c "import bedolaga_mcp; from bedolaga_mcp.tools import list_tools; names={t['name'] for t in list_tools()}; assert names == {'bedolaga_user_get','bedolaga_billing_get','bedolaga_referrals_get'}, names"
+          python -c "import bedolaga_mcp; from bedolaga_mcp.tools import list_tools; names={t['name'] for t in list_tools()}; assert names == {'bedolaga_user_get','bedolaga_billing_get','bedolaga_referrals_get','bedolaga_subscription_get','bedolaga_tickets_get','bedolaga_payment_status_get','bedolaga_promocode_check','bedolaga_gifts_get'}, names"
+
 
   build-and-push:
     needs: smoke

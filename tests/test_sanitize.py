@@ -3,7 +3,12 @@ from __future__ import annotations
 import unittest
 from typing import Any
 
-from bedolaga_mcp.sanitize import sanitize_billing, sanitize_referrals, sanitize_user
+from bedolaga_mcp.sanitize import (
+    sanitize_billing,
+    sanitize_referrals,
+    sanitize_subscriptions,
+    sanitize_user,
+)
 
 
 def _all_keys(value: Any) -> set[str]:
@@ -145,6 +150,220 @@ class SanitizerContractTests(unittest.TestCase):
         self.assertNotIn("email", keys)
         self.assertNotIn("username", keys)
 
+    def test_subscription_payload_merging_ownership_and_privacy(self) -> None:
+        raw_subscriptions = [
+            {
+                "id": 11,
+                "user_id": 42,
+                "status": "active",
+                "actual_status": "active",
+                "is_trial": False,
+                "tariff_id": 5,
+                "created_at": "2026-07-31T12:00:00Z",
+                "start_date": "2026-08-01T00:00:00Z",
+                "end_date": "2026-09-01T00:00:00Z",
+                "autopay_enabled": True,
+                "autopay_days_before": 3,
+                "subscription_url": "https://secret.url",
+                "subscription_crypto_link": "vless://secret",
+                "connected_squads": ["squad1"],
+                "traffic_limit_gb": 100,
+                "device_limit": 2,
+            },
+            {
+                "id": 99,
+                "user_id": 999,  # different user
+                "status": "active",
+                "tariff_id": 1,
+            },
+            {
+                "id": 10,
+                "user_id": 42,
+                "status": "expired",
+                "actual_status": "expired",
+                "is_trial": True,
+                "tariff_id": 3,
+                "created_at": "2026-06-01T12:00:00Z",
+                "start_date": "2026-06-01T12:00:00Z",
+                "end_date": "2026-07-01T12:00:00Z",
+            },
+        ]
+
+        result = sanitize_subscriptions(self.user, raw_subscriptions, owner_id=42)
+
+        self.assertTrue(result["has_subscription_records"])
+        self.assertEqual(result["active_record_count"], 1)
+        self.assertEqual(len(result["subscriptions"]), 2)
+
+        # active first
+        self.assertEqual(result["subscriptions"][0]["id"], 11)
+        self.assertEqual(result["subscriptions"][0]["tariff_name"], "Plus")
+        self.assertEqual(result["subscriptions"][0]["created_at"], "2026-07-31T12:00:00Z")
+        self.assertEqual(result["subscriptions"][1]["id"], 10)
+
+        # Privacy checks
+        keys = _all_keys(result)
+        self.assertNotIn("user_id", keys)
+        self.assertNotIn("subscription_url", keys)
+        self.assertNotIn("subscription_crypto_link", keys)
+        self.assertNotIn("connected_squads", keys)
+        self.assertNotIn("traffic_limit_gb", keys)
+        self.assertNotIn("device_limit", keys)
+
+    def test_tickets_payload_privacy_and_ownership(self) -> None:
+        raw_tickets = [
+            {
+                "id": 101,
+                "user_id": 42,
+                "title": "Cannot connect",
+                "status": "open",
+                "priority": "high",
+                "created_at": "2026-08-01T10:00:00Z",
+                "updated_at": "2026-08-01T11:00:00Z",
+                "closed_at": None,
+                "messages": [{"id": 1, "body": "Sensitive chat message"}],
+                "reply_blocks": [{"secret": "data"}],
+                "media_files": ["attachment.png"],
+            },
+            {
+                "id": 102,
+                "user_id": 999,  # other user
+                "title": "Other user ticket",
+                "status": "closed",
+                "priority": "low",
+            },
+        ]
+
+        from bedolaga_mcp.sanitize import sanitize_tickets
+
+        result = sanitize_tickets(raw_tickets, owner_id=42)
+
+        self.assertTrue(result["has_tickets"])
+        self.assertEqual(len(result["tickets"]), 1)
+        ticket = result["tickets"][0]
+        self.assertEqual(ticket["id"], 101)
+        self.assertEqual(
+            set(ticket.keys()),
+            {
+                "id",
+                "title",
+                "status",
+                "priority",
+                "created_at",
+                "updated_at",
+                "closed_at",
+            },
+        )
+        keys = _all_keys(result)
+        self.assertNotIn("messages", keys)
+        self.assertNotIn("reply_blocks", keys)
+        self.assertNotIn("media_files", keys)
+        self.assertNotIn("user_id", keys)
+
+    def test_payment_status_sanitizer(self) -> None:
+        raw_txs = {
+            "items": [
+                {
+                    "id": 1,
+                    "user_id": 42,
+                    "type": "deposit",
+                    "is_completed": True,
+                    "amount_kopeks": 100_000,
+                    "payment_method": "tinkoff",
+                    "external_id": "secret-ext-id",
+                    "created_at": "2026-08-01T12:00:00Z",
+                    "completed_at": "2026-08-01T12:01:00Z",
+                },
+                {
+                    "id": 2,
+                    "user_id": 42,
+                    "type": "referral_reward",
+                    "is_completed": True,
+                    "amount_kopeks": 5_000,
+                },
+                {
+                    "id": 3,
+                    "user_id": 999,  # another user
+                    "type": "deposit",
+                    "is_completed": True,
+                    "amount_kopeks": 10_000,
+                },
+            ]
+        }
+
+        from bedolaga_mcp.sanitize import sanitize_payment_status
+
+        result = sanitize_payment_status(raw_txs, owner_id=42, limit=5)
+        self.assertEqual(result["scope"], "bedolaga_accounting_transactions")
+        self.assertEqual(len(result["payments"]), 1)
+        p = result["payments"][0]
+        self.assertEqual(p["id"], 1)
+        self.assertEqual(p["category"], "deposit")
+        self.assertEqual(p["accounting_status"], "completed")
+        self.assertEqual(p["amount_kopeks"], 100_000)
+        self.assertEqual(p["amount_rubles"], 1000.0)
+        keys = _all_keys(result)
+        self.assertNotIn("external_id", keys)
+        self.assertNotIn("user_id", keys)
+
+    def test_gifts_sanitizer(self) -> None:
+        raw_txs = {
+            "items": [
+                {
+                    "id": 99,
+                    "user_id": 42,
+                    "type": "gift_purchase",
+                    "is_completed": True,
+                    "amount_kopeks": -30_000,
+                    "payment_method": "card",
+                    "gift_token": "secret-token",
+                    "recipient": "secret-recipient",
+                    "description": "Secret gift note",
+                    "external_id": "secret-ext-id",
+                    "created_at": "2026-08-01T12:00:00Z",
+                    "completed_at": "2026-08-01T12:00:05Z",
+                },
+                {
+                    "id": 100,
+                    "user_id": 999,  # other user
+                    "type": "gift_purchase",
+                    "is_completed": True,
+                    "amount_kopeks": -30_000,
+                },
+                {
+                    "id": 101,
+                    "user_id": 42,
+                    "type": "deposit",
+                    "is_completed": True,
+                    "amount_kopeks": 50_000,
+                },
+            ]
+        }
+
+        from bedolaga_mcp.sanitize import sanitize_gifts
+
+        result = sanitize_gifts(raw_txs, owner_id=42, limit=20)
+        self.assertEqual(result["scope"], "own_gift_purchase_transactions")
+        self.assertFalse(result["received_gifts_available"])
+        self.assertFalse(result["activation_status_available"])
+        self.assertEqual(len(result["gift_purchases"]), 1)
+        gp = result["gift_purchases"][0]
+        self.assertEqual(gp["id"], 99)
+        self.assertEqual(gp["amount_kopeks"], 30_000)
+        self.assertEqual(gp["amount_rubles"], 300.0)
+        self.assertEqual(gp["accounting_status"], "completed")
+
+        keys = _all_keys(result)
+        self.assertNotIn("gift_token", keys)
+        self.assertNotIn("recipient", keys)
+        self.assertNotIn("description", keys)
+        self.assertNotIn("external_id", keys)
+        self.assertNotIn("user_id", keys)
+
 
 if __name__ == "__main__":
     unittest.main()
+
+
+
+

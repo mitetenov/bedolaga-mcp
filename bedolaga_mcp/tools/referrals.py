@@ -20,9 +20,8 @@ from typing import Any
 
 from ..client import BedolagaClient
 from ..contracts import make_success_envelope
-from ..errors import InvalidInputError
 from ..sanitize import REFERRAL_REWARDS_MAX, sanitize_referrals
-from . import require_internal_id
+from .identity import resolve_owner
 
 #: The referrer endpoint's third-party ``referrals`` list is never returned, so
 #: the smallest allowed page is enough for the owner aggregates.
@@ -45,14 +44,9 @@ async def bedolaga_referrals_get(
     internal user id → referrer detail (owner aggregates only) → the owner's
     recent referral_reward operations → the sanitizer → the success envelope.
     """
-    if (telegram_id is None) == (user_id is None):
-        raise InvalidInputError("Provide exactly one of telegram_id or user_id")
-    raw_user = (
-        await client.get_user_by_telegram_id(telegram_id)
-        if telegram_id is not None
-        else await client.get_user_by_id(user_id)
+    raw_user, owner_id = await resolve_owner(
+        client, telegram_id=telegram_id, user_id=user_id
     )
-    owner_id = require_internal_id(raw_user)
     raw_detail = await client.get_referrer_detail(
         owner_id, limit=_REFERRER_PAGE_LIMIT, offset=0
     )
@@ -63,3 +57,4 @@ async def bedolaga_referrals_get(
         raw_detail, raw_user=raw_user, raw_referral_transactions=raw_rewards
     )
     return make_success_envelope("bedolaga_referrals_get", data)
+

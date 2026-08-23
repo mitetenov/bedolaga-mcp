@@ -18,8 +18,8 @@ from typing import Any
 
 from ..client import BedolagaClient
 from ..contracts import make_success_envelope
-from ..errors import InvalidInputError
 from ..sanitize import sanitize_user
+from .identity import resolve_user
 
 __all__ = ["bedolaga_user_get"]
 
@@ -38,12 +38,9 @@ async def bedolaga_user_get(
     makes exactly one resolution call and returns the sanitized account facts,
     never forbidden fields.
     """
-    if (telegram_id is None) == (user_id is None):
-        raise InvalidInputError("Provide exactly one of telegram_id or user_id")
-    raw_user = (
-        await client.get_user_by_telegram_id(telegram_id)
-        if telegram_id is not None
-        else await client.get_user_by_id(user_id)
+    raw_user = await resolve_user(
+        client, telegram_id=telegram_id, user_id=user_id
     )
     data = sanitize_user(raw_user)
     return make_success_envelope("bedolaga_user_get", data)
+

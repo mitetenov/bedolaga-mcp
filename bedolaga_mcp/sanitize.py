@@ -17,6 +17,7 @@ never returned even when upstream returns more.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 
 from . import contracts
@@ -89,6 +90,94 @@ def sanitize_billing(
         ),
         "bot_subscriptions": contracts.bot_subscription_records(raw_user),
         "meta": contracts.BILLING_META_NOTE,
+    }
+
+
+def sanitize_subscriptions(
+    raw_user: dict[str, Any] | None,
+    raw_subscriptions: list[dict[str, Any]] | None,
+    owner_id: int,
+) -> dict[str, Any]:
+    """Build the safe ``bedolaga_subscription_get`` payload.
+
+    Merges lifecycle records from /subscriptions with tariff data from /users,
+    enforcing ownership (records with user_id != owner_id are excluded) and
+    excluding secrets (subscription URLs, crypto links, connected squads,
+    traffic/device limits).
+
+    Results are sorted effective-active first, then end_date newest-first.
+    """
+    tariff_map: dict[Any, dict[str, Any]] = {}
+    if isinstance(raw_user, dict):
+        # Extract tariff info from raw_user's subscriptions / subscription
+        subs = raw_user.get("subscriptions")
+        if isinstance(subs, list):
+            for s in subs:
+                if isinstance(s, dict) and s.get("id") is not None:
+                    tariff_map[s["id"]] = {
+                        "tariff_id": s.get("tariff_id"),
+                        "tariff_name": s.get("tariff_name"),
+                    }
+        sub = raw_user.get("subscription")
+        if isinstance(sub, dict) and sub.get("id") is not None:
+            tariff_map.setdefault(
+                sub["id"],
+                {
+                    "tariff_id": sub.get("tariff_id"),
+                    "tariff_name": sub.get("tariff_name"),
+                },
+            )
+
+    normalized: list[dict[str, Any]] = []
+    seen_ids: set[Any] = set()
+
+    if isinstance(raw_subscriptions, list) and raw_subscriptions:
+        for item in raw_subscriptions:
+            if not isinstance(item, dict):
+                continue
+            # Ownership check: if user_id is in item and != owner_id, skip
+            if item.get("user_id") is not None and item.get("user_id") != owner_id:
+                continue
+            rec = contracts.bot_subscription_record(item)
+            if rec is None:
+                continue
+            rec_id = rec.get("id")
+            if rec_id is not None and rec_id in seen_ids:
+                continue
+            if rec_id is not None:
+                seen_ids.add(rec_id)
+            # Fill tariff_name from user tariff_map if missing in rec
+            if rec_id in tariff_map:
+                t_info = tariff_map[rec_id]
+                if rec.get("tariff_id") is None and t_info.get("tariff_id") is not None:
+                    rec["tariff_id"] = t_info["tariff_id"]
+                if rec.get("tariff_name") is None and t_info.get("tariff_name") is not None:
+                    rec["tariff_name"] = t_info["tariff_name"]
+            normalized.append(rec)
+    elif isinstance(raw_user, dict):
+        normalized = contracts.bot_subscription_records(raw_user)
+
+    # Sort: effective-active first, then end_date newest-first
+    def _sort_key(record: dict[str, Any]) -> tuple[int, float]:
+        eff = record.get("bot_record_effective_status") or record.get("bot_record_status")
+        is_active = 0 if eff == "active" else 1
+        parsed_end = contracts.parse_timestamp(record.get("end_date"))
+        ts = parsed_end.timestamp() if parsed_end is not None else float("-inf")
+        # For newest-first within the same active group, negate ts
+        return (is_active, -ts)
+
+    sorted_records = sorted(normalized, key=_sort_key)
+    active_count = sum(
+        1
+        for r in sorted_records
+        if (r.get("bot_record_effective_status") or r.get("bot_record_status")) == "active"
+    )
+
+    return {
+        "has_subscription_records": len(sorted_records) > 0,
+        "active_record_count": active_count,
+        "subscriptions": sorted_records,
+        "meta": contracts.SUBSCRIPTION_META_NOTE,
     }
 
 
@@ -258,9 +347,278 @@ def _history_limit(limit: Any) -> int:
     return _DEFAULT_HISTORY_LIMIT
 
 
+def sanitize_tickets(
+    raw_tickets: list[dict[str, Any]] | None,
+    owner_id: int,
+) -> dict[str, Any]:
+    """Build the safe ``bedolaga_tickets_get`` payload.
+
+    Returns the caller's own tickets with status, priority, and lifecycle dates.
+    Messages, reply blocks, media, attachments, and third-party tickets are
+    intentionally excluded.
+    """
+    if not isinstance(raw_tickets, list):
+        return {
+            "has_tickets": False,
+            "tickets": [],
+            "meta": contracts.TICKETS_META_NOTE,
+        }
+
+    tickets = []
+    for item in raw_tickets:
+        if not isinstance(item, dict):
+            continue
+        if item.get("user_id") is not None and item.get("user_id") != owner_id:
+            continue
+        tickets.append(
+            {
+                "id": item.get("id"),
+                "title": item.get("title"),
+                "status": item.get("status"),
+                "priority": item.get("priority"),
+                "created_at": item.get("created_at"),
+                "updated_at": item.get("updated_at"),
+                "closed_at": item.get("closed_at"),
+            }
+        )
+
+    return {
+        "has_tickets": len(tickets) > 0,
+        "tickets": tickets,
+        "meta": contracts.TICKETS_META_NOTE,
+    }
+
+
+def sanitize_payment_status(
+    raw_transactions: dict[str, Any] | None,
+    owner_id: int,
+    limit: int = 5,
+) -> dict[str, Any]:
+    """Build the safe ``bedolaga_payment_status_get`` payload.
+
+    Returns the owner's financial transactions (deposit, subscription_purchase,
+    gift_purchase, refund, failed_refund) with strict accounting_status
+    (completed, not_completed, unknown). Excludes third-party data and provider
+    secrets.
+    """
+    if not isinstance(raw_transactions, dict):
+        return {
+            "scope": "bedolaga_accounting_transactions",
+            "payments": [],
+            "meta": contracts.PAYMENT_STATUS_META_NOTE,
+        }
+
+    items = raw_transactions.get("items")
+    if not isinstance(items, list):
+        return {
+            "scope": "bedolaga_accounting_transactions",
+            "payments": [],
+            "meta": contracts.PAYMENT_STATUS_META_NOTE,
+        }
+
+    payments = []
+    for tx in items:
+        if not isinstance(tx, dict):
+            continue
+        if tx.get("user_id") is not None and tx.get("user_id") != owner_id:
+            continue
+        cat = contracts.transaction_category(tx.get("type"))
+        if cat not in contracts.PAYMENT_CATEGORIES:
+            continue
+        amount = contracts.amount_money(tx.get("amount_kopeks"))
+        payments.append(
+            {
+                "id": tx.get("id"),
+                "category": cat,
+                "direction": contracts.transaction_direction(tx.get("type")),
+                "raw_type": tx.get("type"),
+                "amount_kopeks": amount["amount_kopeks"] if amount else None,
+                "amount_rubles": amount["amount_rubles"] if amount else None,
+                "payment_method": tx.get("payment_method"),
+                "accounting_status": contracts.accounting_status(tx.get("is_completed")),
+                "created_at": tx.get("created_at"),
+                "completed_at": tx.get("completed_at"),
+            }
+        )
+
+    payments.sort(key=contracts.transaction_time_key, reverse=True)
+    capped_limit = _history_limit(limit)
+    return {
+        "scope": "bedolaga_accounting_transactions",
+        "payments": payments[:capped_limit],
+        "meta": contracts.PAYMENT_STATUS_META_NOTE,
+    }
+
+
+def sanitize_promocode(
+    raw_promo: dict[str, Any] | None,
+    code_input: str,
+    *,
+    lookup_incomplete: bool = False,
+) -> dict[str, Any]:
+    """Build the safe ``bedolaga_promocode_check`` payload.
+
+    Masks the code plaintext, evaluates global validity and reason codes, and
+    returns bonus amounts and usage limits without exposing creator or third-party
+    data.
+    """
+    masked = contracts.mask_code(code_input)
+    if raw_promo is None:
+        reason = "lookup_incomplete" if lookup_incomplete else "not_found"
+        return {
+            "scope": "global_promocode_definition",
+            "code_masked": masked,
+            "globally_valid": False,
+            "reason_code": reason,
+            "type": None,
+            "balance_bonus_kopeks": None,
+            "balance_bonus_rubles": None,
+            "subscription_days": 0,
+            "traffic_gb": 0,
+            "uses_left": None,
+            "valid_from": None,
+            "valid_until": None,
+            "user_eligibility": "unknown",
+            "meta": contracts.PROMOCODE_META_NOTE,
+        }
+
+    is_active = raw_promo.get("is_active") is True
+    is_valid = raw_promo.get("is_valid") is True
+    valid_from_str = raw_promo.get("valid_from")
+    valid_until_str = raw_promo.get("valid_until")
+    uses_left = raw_promo.get("uses_left")
+    if (
+        uses_left is None
+        and raw_promo.get("max_uses") is not None
+        and raw_promo.get("current_uses") is not None
+    ):
+        uses_left = max(0, raw_promo["max_uses"] - raw_promo["current_uses"])
+
+    now = datetime.now(UTC)
+    parsed_from = contracts.parse_timestamp(valid_from_str)
+    parsed_until = contracts.parse_timestamp(valid_until_str)
+
+    if not is_active:
+        globally_valid = False
+        reason_code = "inactive"
+    elif parsed_from is not None and parsed_from > now:
+        globally_valid = False
+        reason_code = "not_yet_valid"
+    elif (
+        not is_valid
+        or (parsed_until is not None and parsed_until < now)
+        or (isinstance(uses_left, int) and not isinstance(uses_left, bool) and uses_left <= 0)
+    ):
+        globally_valid = False
+        reason_code = "expired_or_exhausted"
+    else:
+        globally_valid = True
+        reason_code = None
+
+    bonus = contracts.balance_money(raw_promo.get("balance_bonus_kopeks"))
+    sub_days = raw_promo.get("subscription_days")
+    if isinstance(sub_days, bool) or not isinstance(sub_days, int) or sub_days < 0:
+        sub_days = 0
+    traffic = raw_promo.get("traffic_gb")
+    if isinstance(traffic, bool) or not isinstance(traffic, int) or traffic < 0:
+        traffic = 0
+
+    return {
+        "scope": "global_promocode_definition",
+        "code_masked": masked,
+        "globally_valid": globally_valid,
+        "reason_code": reason_code,
+        "type": raw_promo.get("type"),
+        "balance_bonus_kopeks": bonus["balance_kopeks"] if bonus else None,
+        "balance_bonus_rubles": bonus["balance_rubles"] if bonus else None,
+        "subscription_days": sub_days,
+        "traffic_gb": traffic,
+        "uses_left": (
+            uses_left
+            if isinstance(uses_left, int) and not isinstance(uses_left, bool)
+            else None
+        ),
+        "valid_from": valid_from_str,
+        "valid_until": valid_until_str,
+        "user_eligibility": "unknown",
+        "meta": contracts.PROMOCODE_META_NOTE,
+    }
+
+
+def sanitize_gifts(
+    raw_transactions: dict[str, Any] | None,
+    owner_id: int,
+    limit: int = 20,
+) -> dict[str, Any]:
+    """Build the safe ``bedolaga_gifts_get`` payload.
+
+    Returns the owner's own gift purchase accounting events. Excludes
+    gift tokens, recipient data, descriptions, and third-party transactions.
+    """
+    if not isinstance(raw_transactions, dict):
+        return {
+            "scope": "own_gift_purchase_transactions",
+            "gift_purchases": [],
+            "received_gifts_available": False,
+            "activation_status_available": False,
+            "meta": contracts.GIFTS_META_NOTE,
+        }
+
+    items = raw_transactions.get("items")
+    if not isinstance(items, list):
+        return {
+            "scope": "own_gift_purchase_transactions",
+            "gift_purchases": [],
+            "received_gifts_available": False,
+            "activation_status_available": False,
+            "meta": contracts.GIFTS_META_NOTE,
+        }
+
+    purchases = []
+    for tx in items:
+        if not isinstance(tx, dict):
+            continue
+        if tx.get("user_id") is not None and tx.get("user_id") != owner_id:
+            continue
+        if contracts.transaction_category(tx.get("type")) != "gift_purchase":
+            continue
+        amount = contracts.amount_money(tx.get("amount_kopeks"))
+        purchases.append(
+            {
+                "id": tx.get("id"),
+                "amount_kopeks": amount["amount_kopeks"] if amount else None,
+                "amount_rubles": amount["amount_rubles"] if amount else None,
+                "payment_method": tx.get("payment_method"),
+                "accounting_status": contracts.accounting_status(tx.get("is_completed")),
+                "created_at": tx.get("created_at"),
+                "completed_at": tx.get("completed_at"),
+            }
+        )
+
+    purchases.sort(key=contracts.transaction_time_key, reverse=True)
+    capped_limit = _history_limit(limit)
+    return {
+        "scope": "own_gift_purchase_transactions",
+        "gift_purchases": purchases[:capped_limit],
+        "received_gifts_available": False,
+        "activation_status_available": False,
+        "meta": contracts.GIFTS_META_NOTE,
+    }
+
+
 __all__ = [
     "REFERRAL_REWARDS_MAX",
     "sanitize_billing",
+    "sanitize_gifts",
+    "sanitize_payment_status",
+    "sanitize_promocode",
     "sanitize_referrals",
+    "sanitize_subscriptions",
+    "sanitize_tickets",
     "sanitize_user",
 ]
+
+
+
+
+

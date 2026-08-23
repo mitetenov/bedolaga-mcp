@@ -109,13 +109,20 @@ def make_error_envelope(
 TRANSACTION_CATEGORIES: Final[dict[str, str]] = {
     "deposit": "deposit",
     "subscription_payment": "subscription_purchase",
+    "subscription_purchase": "subscription_purchase",
     "gift_payment": "gift_purchase",
+    "gift_purchase": "gift_purchase",
     "withdrawal": "withdrawal",
     "refund": "refund",
     "failed_refund": "failed_refund",
     "referral_reward": "referral_reward",
     "poll_reward": "poll_reward",
 }
+
+#: Categories considered financial payment transactions (excluding rewards/polls).
+PAYMENT_CATEGORIES: Final[frozenset[str]] = frozenset(
+    {"deposit", "subscription_purchase", "gift_purchase", "refund", "failed_refund"}
+)
 
 #: Category used for any raw type not in :data:`TRANSACTION_CATEGORIES`.
 UNKNOWN_CATEGORY: Final = "unknown"
@@ -127,14 +134,37 @@ CREDIT_TYPES: Final[frozenset[str]] = frozenset(
 
 #: Raw types that debit the balance.
 DEBIT_TYPES: Final[frozenset[str]] = frozenset(
-    {"subscription_payment", "gift_payment", "withdrawal", "failed_refund"}
+    {
+        "subscription_payment",
+        "subscription_purchase",
+        "gift_payment",
+        "gift_purchase",
+        "withdrawal",
+        "failed_refund",
+    }
 )
+
 
 #: Direction value for types whose credit/debit meaning is unknown.
 UNKNOWN_DIRECTION: Final = "unknown"
 
 
+def accounting_status(is_completed: object) -> str:
+    """Map the boolean completion flag to a strict accounting status.
+
+    Returns ``completed`` for literal ``True``, ``not_completed`` for literal
+    ``False``, and ``unknown`` for anything else. Never returns 'pending',
+    'failed', or 'cancelled'.
+    """
+    if is_completed is True:
+        return "completed"
+    if is_completed is False:
+        return "not_completed"
+    return "unknown"
+
+
 def transaction_category(raw_type: Any) -> str:
+
     """Map a raw Bedolaga transaction type to a fixed category.
 
     Unknown/future types return ``unknown``; the caller preserves the safe
@@ -300,20 +330,20 @@ def transaction_time_key(tx: dict[str, Any]) -> tuple[datetime, datetime]:
     timestamps without raising.
     """
     effective = _effective_timestamp(tx)
-    completed = _parse_timestamp(tx.get("completed_at"))
+    completed = parse_timestamp(tx.get("completed_at"))
     return effective or _MIN_TIMESTAMP, completed or _MIN_TIMESTAMP
 
 
 def _effective_timestamp(tx: dict[str, Any]) -> datetime | None:
     """Best timestamp for ordering: created_at preferred, else completed_at."""
     for field in ("created_at", "completed_at"):
-        parsed = _parse_timestamp(tx.get(field))
+        parsed = parse_timestamp(tx.get(field))
         if parsed is not None:
             return parsed
     return None
 
 
-def _parse_timestamp(value: Any) -> datetime | None:
+def parse_timestamp(value: Any) -> datetime | None:
     if not isinstance(value, str) or not value.strip():
         return None
     try:
@@ -323,6 +353,7 @@ def _parse_timestamp(value: Any) -> datetime | None:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=UTC)
     return parsed.astimezone(UTC)
+
 
 
 def _summary_from_latest(
@@ -367,12 +398,14 @@ def bot_subscription_record(raw_sub: Any) -> dict[str, Any] | None:
         "is_trial": raw_sub.get("is_trial"),
         "tariff_id": raw_sub.get("tariff_id"),
         "tariff_name": raw_sub.get("tariff_name"),
+        "created_at": raw_sub.get("created_at"),
         "start_date": raw_sub.get("start_date"),
         "end_date": raw_sub.get("end_date"),
         "autopay_enabled": raw_sub.get("autopay_enabled"),
         "autopay_days_before": raw_sub.get("autopay_days_before"),
         "note": BOT_RECORD_NOTE,
     }
+
 
 
 def bot_subscription_records(raw_user: Any) -> list[dict[str, Any]]:
@@ -436,6 +469,41 @@ REFERRAL_META_NOTE: Final = (
     "is intentionally excluded."
 )
 
+#: Fixed meta explanation for the subscription payload.
+SUBSCRIPTION_META_NOTE: Final = (
+    "Bedolaga subscription records are not the VPN panel status."
+)
+
+#: Fixed meta explanation for the tickets payload.
+TICKETS_META_NOTE: Final = (
+    "Tickets belong to the account owner only; messages and media are intentionally excluded."
+)
+
+#: Fixed meta explanation for the payment status payload.
+PAYMENT_STATUS_META_NOTE: Final = (
+    "This does not expose payment-provider attempt status. not_completed is not proof of pending or failure."
+)
+
+#: Fixed meta explanation for the promo code payload.
+PROMOCODE_META_NOTE: Final = (
+    "Global validity only; the existing API cannot check whether this user already used or may apply the code."
+)
+
+#: Fixed meta explanation for the gifts payload.
+GIFTS_META_NOTE: Final = (
+    "The existing Web API exposes gift purchase accounting only."
+)
+
+
+def mask_code(code: str) -> str:
+    """Mask a promo code for safe diagnostic output without revealing full plaintext."""
+    clean = code.strip()
+    if len(clean) >= 4:
+        return f"{clean[:2]}***{clean[-2:]}"
+    if len(clean) >= 2:
+        return f"{clean[:1]}***{clean[-1:]}"
+    return "***"
+
 
 __all__ = [
     "BILLING_META_NOTE",
@@ -444,11 +512,18 @@ __all__ = [
     "DEBIT_TYPES",
     "ERROR_CODES",
     "ERROR_RETRYABLE",
+    "GIFTS_META_NOTE",
+    "PAYMENT_CATEGORIES",
+    "PAYMENT_STATUS_META_NOTE",
+    "PROMOCODE_META_NOTE",
     "REFERRAL_META_NOTE",
     "SOURCE",
+    "SUBSCRIPTION_META_NOTE",
+    "TICKETS_META_NOTE",
     "TRANSACTION_CATEGORIES",
     "UNKNOWN_CATEGORY",
     "UNKNOWN_DIRECTION",
+    "accounting_status",
     "amount_money",
     "balance_money",
     "bot_subscription_record",
@@ -457,11 +532,18 @@ __all__ = [
     "latest_completed_subscription_purchase",
     "make_error_envelope",
     "make_success_envelope",
+    "mask_code",
     "money_pair",
     "month_earned_money",
+    "parse_timestamp",
     "purchased_after_latest_deposit",
     "total_earned_money",
     "transaction_category",
     "transaction_direction",
     "transaction_time_key",
 ]
+
+
+
+
+

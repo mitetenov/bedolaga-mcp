@@ -113,5 +113,18 @@ class TransactionChronologyTests(unittest.TestCase):
         self.assertIsNone(latest_completed_deposit([deposit]))
 
 
+class AccountingStatusTests(unittest.TestCase):
+    def test_strict_accounting_status_normalization(self) -> None:
+        from bedolaga_mcp.contracts import accounting_status
+
+        self.assertEqual(accounting_status(True), "completed")
+        self.assertEqual(accounting_status(False), "not_completed")
+        self.assertEqual(accounting_status(None), "unknown")
+        self.assertEqual(accounting_status("True"), "unknown")
+        self.assertEqual(accounting_status(0), "unknown")
+        self.assertEqual(accounting_status(1), "unknown")
+
+
 if __name__ == "__main__":
     unittest.main()
+
