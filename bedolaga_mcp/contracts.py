@@ -109,7 +109,9 @@ def make_error_envelope(
 TRANSACTION_CATEGORIES: Final[dict[str, str]] = {
     "deposit": "deposit",
     "subscription_payment": "subscription_purchase",
+    "subscription_purchase": "subscription_purchase",
     "gift_payment": "gift_purchase",
+    "gift_purchase": "gift_purchase",
     "withdrawal": "withdrawal",
     "refund": "refund",
     "failed_refund": "failed_refund",
@@ -132,8 +134,16 @@ CREDIT_TYPES: Final[frozenset[str]] = frozenset(
 
 #: Raw types that debit the balance.
 DEBIT_TYPES: Final[frozenset[str]] = frozenset(
-    {"subscription_payment", "gift_payment", "withdrawal", "failed_refund"}
+    {
+        "subscription_payment",
+        "subscription_purchase",
+        "gift_payment",
+        "gift_purchase",
+        "withdrawal",
+        "failed_refund",
+    }
 )
+
 
 #: Direction value for types whose credit/debit meaning is unknown.
 UNKNOWN_DIRECTION: Final = "unknown"
@@ -479,6 +489,11 @@ PROMOCODE_META_NOTE: Final = (
     "Global validity only; the existing API cannot check whether this user already used or may apply the code."
 )
 
+#: Fixed meta explanation for the gifts payload.
+GIFTS_META_NOTE: Final = (
+    "The existing Web API exposes gift purchase accounting only."
+)
+
 
 def mask_code(code: str) -> str:
     """Mask a promo code for safe diagnostic output without revealing full plaintext."""
@@ -497,6 +512,7 @@ __all__ = [
     "DEBIT_TYPES",
     "ERROR_CODES",
     "ERROR_RETRYABLE",
+    "GIFTS_META_NOTE",
     "PAYMENT_CATEGORIES",
     "PAYMENT_STATUS_META_NOTE",
     "PROMOCODE_META_NOTE",
@@ -526,6 +542,7 @@ __all__ = [
     "transaction_direction",
     "transaction_time_key",
 ]
+
 
 
 

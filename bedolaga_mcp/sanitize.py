@@ -545,9 +545,71 @@ def sanitize_promocode(
     }
 
 
+def sanitize_gifts(
+    raw_transactions: dict[str, Any] | None,
+    owner_id: int,
+    limit: int = 20,
+) -> dict[str, Any]:
+    """Build the safe ``bedolaga_gifts_get`` payload.
+
+    Returns the owner's own gift purchase accounting events. Excludes
+    gift tokens, recipient data, descriptions, and third-party transactions.
+    """
+    if not isinstance(raw_transactions, dict):
+        return {
+            "scope": "own_gift_purchase_transactions",
+            "gift_purchases": [],
+            "received_gifts_available": False,
+            "activation_status_available": False,
+            "meta": contracts.GIFTS_META_NOTE,
+        }
+
+    items = raw_transactions.get("items")
+    if not isinstance(items, list):
+        return {
+            "scope": "own_gift_purchase_transactions",
+            "gift_purchases": [],
+            "received_gifts_available": False,
+            "activation_status_available": False,
+            "meta": contracts.GIFTS_META_NOTE,
+        }
+
+    purchases = []
+    for tx in items:
+        if not isinstance(tx, dict):
+            continue
+        if tx.get("user_id") is not None and tx.get("user_id") != owner_id:
+            continue
+        if contracts.transaction_category(tx.get("type")) != "gift_purchase":
+            continue
+        amount = contracts.amount_money(tx.get("amount_kopeks"))
+        purchases.append(
+            {
+                "id": tx.get("id"),
+                "amount_kopeks": amount["amount_kopeks"] if amount else None,
+                "amount_rubles": amount["amount_rubles"] if amount else None,
+                "payment_method": tx.get("payment_method"),
+                "accounting_status": contracts.accounting_status(tx.get("is_completed")),
+                "created_at": tx.get("created_at"),
+                "completed_at": tx.get("completed_at"),
+            }
+        )
+
+    purchases.sort(key=contracts.transaction_time_key, reverse=True)
+    capped_limit = _history_limit(limit)
+    return {
+        "scope": "own_gift_purchase_transactions",
+        "gift_purchases": purchases[:capped_limit],
+        "received_gifts_available": False,
+        "activation_status_available": False,
+        "meta": contracts.GIFTS_META_NOTE,
+    }
+
+
 __all__ = [
     "REFERRAL_REWARDS_MAX",
     "sanitize_billing",
+    "sanitize_gifts",
     "sanitize_payment_status",
     "sanitize_promocode",
     "sanitize_referrals",
@@ -555,6 +617,7 @@ __all__ = [
     "sanitize_tickets",
     "sanitize_user",
 ]
+
 
 
 

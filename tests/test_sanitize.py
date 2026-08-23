@@ -306,9 +306,64 @@ class SanitizerContractTests(unittest.TestCase):
         self.assertNotIn("external_id", keys)
         self.assertNotIn("user_id", keys)
 
+    def test_gifts_sanitizer(self) -> None:
+        raw_txs = {
+            "items": [
+                {
+                    "id": 99,
+                    "user_id": 42,
+                    "type": "gift_purchase",
+                    "is_completed": True,
+                    "amount_kopeks": -30_000,
+                    "payment_method": "card",
+                    "gift_token": "secret-token",
+                    "recipient": "secret-recipient",
+                    "description": "Secret gift note",
+                    "external_id": "secret-ext-id",
+                    "created_at": "2026-08-01T12:00:00Z",
+                    "completed_at": "2026-08-01T12:00:05Z",
+                },
+                {
+                    "id": 100,
+                    "user_id": 999,  # other user
+                    "type": "gift_purchase",
+                    "is_completed": True,
+                    "amount_kopeks": -30_000,
+                },
+                {
+                    "id": 101,
+                    "user_id": 42,
+                    "type": "deposit",
+                    "is_completed": True,
+                    "amount_kopeks": 50_000,
+                },
+            ]
+        }
+
+        from bedolaga_mcp.sanitize import sanitize_gifts
+
+        result = sanitize_gifts(raw_txs, owner_id=42, limit=20)
+        self.assertEqual(result["scope"], "own_gift_purchase_transactions")
+        self.assertFalse(result["received_gifts_available"])
+        self.assertFalse(result["activation_status_available"])
+        self.assertEqual(len(result["gift_purchases"]), 1)
+        gp = result["gift_purchases"][0]
+        self.assertEqual(gp["id"], 99)
+        self.assertEqual(gp["amount_kopeks"], 30_000)
+        self.assertEqual(gp["amount_rubles"], 300.0)
+        self.assertEqual(gp["accounting_status"], "completed")
+
+        keys = _all_keys(result)
+        self.assertNotIn("gift_token", keys)
+        self.assertNotIn("recipient", keys)
+        self.assertNotIn("description", keys)
+        self.assertNotIn("external_id", keys)
+        self.assertNotIn("user_id", keys)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 
