@@ -21,8 +21,16 @@ from ..contracts import make_success_envelope
 from ..sanitize import sanitize_payment_status
 from .identity import resolve_owner
 
-#: Upper bound of transactions fetched from upstream to build the payment list.
-_UPSTREAM_TRANSACTIONS_LIMIT: int = 200
+#: Raw transaction types in the pinned Bedolaga Web API contract that represent
+#: payment events. Fetching each type separately prevents newer reward/poll
+#: transactions from hiding older payments behind the upstream page limit.
+_UPSTREAM_PAYMENT_TYPES: tuple[str, ...] = (
+    "deposit",
+    "subscription_payment",
+    "gift_payment",
+    "refund",
+    "failed_refund",
+)
 
 __all__ = ["bedolaga_payment_status_get"]
 
@@ -45,8 +53,48 @@ async def bedolaga_payment_status_get(
     raw_user, owner_id = await resolve_owner(
         client, telegram_id=telegram_id, user_id=user_id
     )
-    raw_txs = await client.list_transactions(
-        owner_id, limit=_UPSTREAM_TRANSACTIONS_LIMIT, offset=0
-    )
+    raw_txs = await _fetch_payment_history(client, owner_id, limit)
     data = sanitize_payment_status(raw_txs, owner_id=owner_id, limit=limit)
     return make_success_envelope("bedolaga_payment_status_get", data)
+
+
+async def _fetch_payment_history(
+    client: BedolagaClient, user_id: int, limit: int
+) -> dict[str, Any]:
+    """Fetch and merge the latest records for every upstream payment type.
+
+    The latest ``limit`` records from each disjoint type are sufficient to build
+    the latest ``limit`` records across their union. Pages are still deduplicated
+    by transaction id so a drifting upstream filter cannot duplicate output.
+    """
+    payloads = []
+    for transaction_type in _UPSTREAM_PAYMENT_TYPES:
+        payloads.append(
+            await client.list_transactions(
+                user_id,
+                type=transaction_type,
+                limit=limit,
+                offset=0,
+            )
+        )
+    return _merge_payment_pages(payloads)
+
+
+def _merge_payment_pages(payloads: list[dict[str, Any]]) -> dict[str, Any]:
+    """Merge transaction pages and deduplicate records with the same id."""
+    items: list[dict[str, Any]] = []
+    seen_ids: set[Any] = set()
+    for payload in payloads:
+        raw_items = payload.get("items") if isinstance(payload, dict) else None
+        if not isinstance(raw_items, list):
+            continue
+        for item in raw_items:
+            if not isinstance(item, dict):
+                continue
+            item_id = item.get("id")
+            if item_id is not None and item_id in seen_ids:
+                continue
+            if item_id is not None:
+                seen_ids.add(item_id)
+            items.append(item)
+    return {"items": items}

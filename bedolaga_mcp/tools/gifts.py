@@ -36,13 +36,13 @@ async def bedolaga_gifts_get(
     (positive Telegram ID) or ``user_id`` (internal Bedolaga id) is required;
     both or neither raises ``invalid_input``. ``limit`` is bounded by the
     registered schema (1..50, default 20). Flow: resolve owner →
-    list_transactions (type=gift_purchase) → sanitize_gifts → success envelope.
+    list_transactions (type=gift_payment) → sanitize_gifts → success envelope.
     """
     raw_user, owner_id = await resolve_owner(
         client, telegram_id=telegram_id, user_id=user_id
     )
     raw_transactions = await client.list_transactions(
-        owner_id, type="gift_purchase", limit=limit, offset=0
+        owner_id, type="gift_payment", limit=limit, offset=0
     )
     data = sanitize_gifts(raw_transactions, owner_id=owner_id, limit=limit)
     return make_success_envelope("bedolaga_gifts_get", data)

@@ -15,6 +15,7 @@ class MockBedolagaClient:
     ) -> None:
         self.users_by_tg = users_by_tg or {}
         self.transactions_by_user = transactions_by_user or {}
+        self.transaction_calls: list[dict[str, Any]] = []
 
     async def get_user_by_telegram_id(self, telegram_id: int) -> dict[str, Any]:
         return self.users_by_tg[telegram_id]
@@ -29,7 +30,16 @@ class MockBedolagaClient:
         limit: int | None = None,
         offset: int = 0,
     ) -> dict[str, Any]:
-        return self.transactions_by_user.get(user_id, {"items": []})
+        self.transaction_calls.append(
+            {"user_id": user_id, "type": type, "limit": limit, "offset": offset}
+        )
+        payload = self.transactions_by_user.get(user_id, {"items": []})
+        items = payload.get("items", [])
+        if type is not None:
+            items = [item for item in items if item.get("type") == type]
+        if limit is not None:
+            items = items[:limit]
+        return {"items": items}
 
 
 class PaymentStatusToolTests(unittest.IsolatedAsyncioTestCase):
@@ -95,6 +105,48 @@ class PaymentStatusToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(p2["accounting_status"], "not_completed")
         self.assertNotEqual(p2["accounting_status"], "pending")
         self.assertNotEqual(p2["accounting_status"], "failed")
+
+        self.assertEqual(
+            [call["type"] for call in client.transaction_calls],
+            [
+                "deposit",
+                "subscription_payment",
+                "gift_payment",
+                "refund",
+                "failed_refund",
+            ],
+        )
+        self.assertTrue(all(call["limit"] == 5 for call in client.transaction_calls))
+
+    async def test_rewards_cannot_hide_older_payment_events(self) -> None:
+        rewards = [
+            {
+                "id": reward_id,
+                "user_id": 42,
+                "type": "referral_reward",
+                "is_completed": True,
+                "amount_kopeks": 100,
+                "created_at": f"2026-08-02T12:{reward_id % 60:02d}:00Z",
+            }
+            for reward_id in range(1, 251)
+        ]
+        deposit = {
+            "id": 999,
+            "user_id": 42,
+            "type": "deposit",
+            "is_completed": True,
+            "amount_kopeks": 50_000,
+            "created_at": "2026-08-01T12:00:00Z",
+            "completed_at": "2026-08-01T12:01:00Z",
+        }
+        client: Any = MockBedolagaClient(
+            users_by_tg={777: {"id": 42, "telegram_id": 777}},
+            transactions_by_user={42: {"items": [*rewards, deposit]}},
+        )
+
+        res = await bedolaga_payment_status_get(client, telegram_id=777, limit=5)
+
+        self.assertEqual([item["id"] for item in res["data"]["payments"]], [999])
 
 
 if __name__ == "__main__":

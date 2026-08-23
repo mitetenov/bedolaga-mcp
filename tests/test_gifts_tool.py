@@ -43,7 +43,7 @@ class GiftsToolTests(unittest.IsolatedAsyncioTestCase):
                         {
                             "id": 99,
                             "user_id": 42,
-                            "type": "gift_purchase",
+                            "type": "gift_payment",
                             "is_completed": True,
                             "amount_kopeks": -30_000,
                             "payment_method": "balance",
@@ -79,6 +79,7 @@ class GiftsToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("gift_token", gp)
         self.assertNotIn("description", gp)
         self.assertNotIn("user_id", gp)
+        self.assertEqual(client.requested_type, "gift_payment")
 
 
 if __name__ == "__main__":
