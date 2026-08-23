@@ -60,7 +60,8 @@ __all__ = [
 
 
 from .identity import require_internal_id
-from . import billing, referrals, user
+from . import billing, gifts, payment_status, promocode, referrals, subscription, tickets, user
+
 
 
 def error_envelope(exc: BaseException, tool: str) -> dict[str, Any]:
@@ -164,6 +165,70 @@ async def _referrals_get_handler(
     )
 
 
+async def _subscription_get_handler(
+    telegram_id: int | None = None,
+    user_id: int | None = None,
+) -> dict[str, Any]:
+    return await _run(
+        subscription.bedolaga_subscription_get,
+        _get_client,
+        "bedolaga_subscription_get",
+        {"telegram_id": telegram_id, "user_id": user_id},
+    )
+
+
+async def _tickets_get_handler(
+    telegram_id: int | None = None,
+    user_id: int | None = None,
+    limit: Annotated[int, Field(default=10, ge=1, le=50)] = 10,
+) -> dict[str, Any]:
+    return await _run(
+        tickets.bedolaga_tickets_get,
+        _get_client,
+        "bedolaga_tickets_get",
+        {"telegram_id": telegram_id, "user_id": user_id, "limit": limit},
+    )
+
+
+async def _payment_status_get_handler(
+    telegram_id: int | None = None,
+    user_id: int | None = None,
+    limit: Annotated[int, Field(default=5, ge=1, le=20)] = 5,
+) -> dict[str, Any]:
+    return await _run(
+        payment_status.bedolaga_payment_status_get,
+        _get_client,
+        "bedolaga_payment_status_get",
+        {"telegram_id": telegram_id, "user_id": user_id, "limit": limit},
+    )
+
+
+async def _promocode_check_handler(
+    code: Annotated[str, Field(min_length=1)],
+    telegram_id: int | None = None,
+    user_id: int | None = None,
+) -> dict[str, Any]:
+    return await _run(
+        promocode.bedolaga_promocode_check,
+        _get_client,
+        "bedolaga_promocode_check",
+        {"telegram_id": telegram_id, "user_id": user_id, "code": code},
+    )
+
+
+async def _gifts_get_handler(
+    telegram_id: int | None = None,
+    user_id: int | None = None,
+    limit: Annotated[int, Field(default=20, ge=1, le=50)] = 20,
+) -> dict[str, Any]:
+    return await _run(
+        gifts.bedolaga_gifts_get,
+        _get_client,
+        "bedolaga_gifts_get",
+        {"telegram_id": telegram_id, "user_id": user_id, "limit": limit},
+    )
+
+
 _TOOLS: tuple[dict[str, Any], ...] = (
     {
         "name": "bedolaga_user_get",
@@ -210,6 +275,72 @@ _TOOLS: tuple[dict[str, Any], ...] = (
         "handler": _referrals_get_handler,
         "impl": referrals.bedolaga_referrals_get,
     },
+    {
+        "name": "bedolaga_subscription_get",
+        "description": (
+            "Read-only. Get the current user's bot-side subscription records and "
+            "lifecycle dates (created_at, start_date, end_date, trial, autopay). "
+            "Identity is pinned by the system, never by the caller: provide "
+            "exactly one of telegram_id (positive Telegram ID) or user_id "
+            "(internal Bedolaga id for email-only cabinet tickets). This record "
+            "reflects bot-side purchases only and is NOT the VPN panel status; "
+            "verify actual panel state via Remnawave MCP."
+        ),
+        "handler": _subscription_get_handler,
+        "impl": subscription.bedolaga_subscription_get,
+    },
+    {
+        "name": "bedolaga_tickets_get",
+        "description": (
+            "Read-only. Get the current user's support ticket summaries (id, title, "
+            "status, priority, timestamps) without message contents or media. "
+            "Identity is pinned by the system, never by the caller: provide "
+            "exactly one of telegram_id (positive Telegram ID) or user_id "
+            "(internal Bedolaga id for email-only cabinet tickets)."
+        ),
+        "handler": _tickets_get_handler,
+        "impl": tickets.bedolaga_tickets_get,
+    },
+    {
+        "name": "bedolaga_payment_status_get",
+        "description": (
+            "Read-only. Get the current user's accounting payment events and "
+            "completion status (completed / not_completed / unknown). Identity "
+            "is pinned by the system, never by the caller: provide exactly one "
+            "of telegram_id (positive Telegram ID) or user_id (internal Bedolaga "
+            "id for email-only cabinet tickets). not_completed indicates only "
+            "that the payment is not completed in bot accounting, NOT that a "
+            "provider attempt failed or is pending."
+        ),
+        "handler": _payment_status_get_handler,
+        "impl": payment_status.bedolaga_payment_status_get,
+    },
+    {
+        "name": "bedolaga_promocode_check",
+        "description": (
+            "Read-only. Check global promo code definition, validity, bonus "
+            "amounts, and remaining uses. Identity is pinned by the system, "
+            "never by the caller: provide exactly one of telegram_id (positive "
+            "Telegram ID) or user_id (internal Bedolaga id for email-only "
+            "cabinet tickets). Checks global definition only; cannot verify if "
+            "the current user is eligible or has already redeemed the code."
+        ),
+        "handler": _promocode_check_handler,
+        "impl": promocode.bedolaga_promocode_check,
+    },
+    {
+        "name": "bedolaga_gifts_get",
+        "description": (
+            "Read-only. Get the current user's gift purchase accounting events. "
+            "Identity is pinned by the system, never by the caller: provide "
+            "exactly one of telegram_id (positive Telegram ID) or user_id "
+            "(internal Bedolaga id for email-only cabinet tickets). Shows own "
+            "gift purchase transactions only; received gifts, gift tokens, and "
+            "recipient activation status are not available."
+        ),
+        "handler": _gifts_get_handler,
+        "impl": gifts.bedolaga_gifts_get,
+    },
 )
 
 _BY_NAME: dict[str, dict[str, Any]] = {tool["name"]: tool for tool in _TOOLS}
@@ -225,7 +356,7 @@ def _input_schema(handler: Any) -> dict[str, Any]:
 
 
 def list_tools() -> list[dict[str, Any]]:
-    """Return the three public tool definitions for MCP ``tools/list``."""
+    """Return the eight public tool definitions for MCP ``tools/list``."""
     return [
         {
             "name": tool["name"],
@@ -262,10 +393,11 @@ def call_tool(name: str, arguments: dict[str, Any]) -> Any:
 
 
 def register_tools(server: Any) -> None:
-    """Register all three tools (name, description, handler) on a FastMCP server."""
+    """Register all eight tools (name, description, handler) on a FastMCP server."""
     for tool in _TOOLS:
         server.add_tool(
             tool["handler"],
             name=tool["name"],
             description=tool["description"],
         )
+
