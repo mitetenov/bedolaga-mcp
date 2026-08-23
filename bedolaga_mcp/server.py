@@ -14,11 +14,40 @@ registered until :func:`create_server` is called by a transport entrypoint.
 from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 from . import __version__
 from .tools import register_tools
 
 SERVER_NAME = "bedolaga-mcp"
+
+# Keep DNS-rebinding protection enabled while allowing the two legitimate ways
+# this internal service is addressed: loopback for health checks/local clients,
+# and its Docker Compose service name for supportBot.  Without an explicit
+# policy FastMCP derives one from its constructor's default host (127.0.0.1),
+# even though Uvicorn binds this service to 0.0.0.0, and rejects the Docker Host
+# header with HTTP 421 before the MCP handler sees the request.
+ALLOWED_HTTP_HOSTS = (
+    "127.0.0.1:*",
+    "localhost:*",
+    "[::1]:*",
+    f"{SERVER_NAME}:*",
+)
+ALLOWED_HTTP_ORIGINS = (
+    "http://127.0.0.1:*",
+    "http://localhost:*",
+    "http://[::1]:*",
+    f"http://{SERVER_NAME}:*",
+)
+
+
+def _transport_security() -> TransportSecuritySettings:
+    """Return a fresh, explicit Host/Origin policy for every server instance."""
+    return TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=list(ALLOWED_HTTP_HOSTS),
+        allowed_origins=list(ALLOWED_HTTP_ORIGINS),
+    )
 
 
 def create_server() -> FastMCP:
@@ -33,6 +62,7 @@ def create_server() -> FastMCP:
         json_response=True,
         stateless_http=False,
         streamable_http_path="/",
+        transport_security=_transport_security(),
     )
     # FastMCP does not expose a public "version" constructor argument; the
     # semantic version is carried by the underlying low-level server and
@@ -43,4 +73,4 @@ def create_server() -> FastMCP:
     return server
 
 
-__all__ = ["SERVER_NAME", "create_server"]
+__all__ = ["ALLOWED_HTTP_HOSTS", "SERVER_NAME", "create_server"]

@@ -187,7 +187,7 @@ Sessionful Streamable HTTP — современный транспорт MCP, т
 | Компонент | Версия |
 |---|---|
 | Bedolaga Bot API (upstream) | commit `49b05d5`, приложение `4.1.0` |
-| bedolaga-mcp | `1.0.0` |
+| bedolaga-mcp | `1.0.1` |
 | supportBot | `2.0.1` |
 | mcp-remnawave | `v3.2.1` |
 
