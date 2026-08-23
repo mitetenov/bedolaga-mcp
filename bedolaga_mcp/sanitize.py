@@ -72,7 +72,9 @@ def sanitize_billing(
     always capped at ``limit``.
     """
     owned = _owned_transactions(raw_user, raw_transactions)
-    recent = sorted(owned, key=_tx_sort_key, reverse=True)[:_history_limit(limit)]
+    recent = sorted(owned, key=contracts.transaction_time_key, reverse=True)[
+        :_history_limit(limit)
+    ]
     balance = contracts.balance_money(raw_user.get("balance_kopeks"))
     return {
         "balance_kopeks": balance["balance_kopeks"] if balance else None,
@@ -233,7 +235,7 @@ def _recent_referral_rewards(
         if owner_id is not None and tx.get("user_id") != owner_id:
             continue
         rewards.append(_sanitize_transaction(tx))
-    rewards.sort(key=_tx_sort_key, reverse=True)
+    rewards.sort(key=contracts.transaction_time_key, reverse=True)
     return rewards[:REFERRAL_REWARDS_MAX]
 
 
@@ -248,15 +250,6 @@ def _was_referred(raw_user: Any) -> bool | None:
     if "referred_by_id" not in raw_user:
         return None
     return raw_user.get("referred_by_id") is not None
-
-
-def _tx_sort_key(tx: dict[str, Any]) -> tuple[str, str]:
-    created = tx.get("created_at")
-    completed = tx.get("completed_at")
-    return (
-        created if isinstance(created, str) else "",
-        completed if isinstance(completed, str) else "",
-    )
 
 
 def _history_limit(limit: Any) -> int:

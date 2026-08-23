@@ -101,7 +101,7 @@ MCP-сервер для получения пользовательских фа
 | `description` | `string` \| `null` | Описание |
 | `created_at` / `completed_at` | `string` \| `null` | Время создания и завершения |
 
-Каждая запись в `bot_subscriptions` содержит `id`, `bot_record_status`, `bot_record_effective_status`, `is_trial`, `start_date`, `end_date`, `autopay_enabled`, `autopay_days_before` и фиксированную `note`. Поле называется `bot_record_status` намеренно: это внутренняя запись Bedolaga, а **не** статус VPN-панели. `bot_record_effective_status` — тоже бот-сторонний эффективный статус (вычисленный ботом из `status` и `end_date`), а не состояние панели.
+Каждая запись в `bot_subscriptions` содержит `id`, `bot_record_status`, `bot_record_effective_status`, `is_trial`, `tariff_id`, `tariff_name`, `start_date`, `end_date`, `autopay_enabled`, `autopay_days_before` и фиксированную `note`. Сервер предпочитает полный upstream-список `subscriptions`, удаляет повторяющиеся записи по `id` и сохраняет fallback на одиночное legacy-поле `subscription`. Поле называется `bot_record_status` намеренно: это внутренняя запись Bedolaga, а **не** статус VPN-панели. `bot_record_effective_status` — тоже бот-сторонний эффективный статус (вычисленный ботом из `status` и `end_date`), а не состояние панели.
 
 **Пример интерпретации (синтетический):** `latest_completed_deposit: {amount_kopeks: 350000}` и `purchased_after_latest_deposit: false` — деньги зачислены на баланс, но отдельная покупка после пополнения не завершена.
 

@@ -17,10 +17,9 @@ jobs:
           cache: pip
       - name: Install runtime dependencies
         run: pip install --no-cache-dir -r requirements.txt
+      - name: Contract and client tests
+        run: python -m unittest discover -s tests -v
       - name: Smoke check package and tool registry
-        # Real check: fails the job when the package is broken. There is no
-        # pytest suite by design (no test files), so this verifies the package
-        # imports and exposes exactly the three required tools.
         run: |
           python -c "import bedolaga_mcp; from bedolaga_mcp.tools import list_tools; names={t['name'] for t in list_tools()}; assert names == {'bedolaga_user_get','bedolaga_billing_get','bedolaga_referrals_get'}, names"
 

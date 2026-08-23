@@ -40,7 +40,8 @@ schema.
 from __future__ import annotations
 
 import asyncio
-from typing import Annotated, Any, Callable
+from collections.abc import Callable
+from typing import Annotated, Any
 
 from mcp.server.fastmcp.utilities.func_metadata import func_metadata
 from pydantic import Field
@@ -75,7 +76,7 @@ def require_internal_id(raw_user: Any) -> int:
     return user_id
 
 
-from . import billing, referrals, user  # noqa: E402  (helpers above must exist first)
+from . import billing, referrals, user
 
 
 def error_envelope(exc: BaseException, tool: str) -> dict[str, Any]:
@@ -106,7 +107,7 @@ async def _run(
         return await impl(client, **arguments)
     except BedolagaError as exc:
         return error_envelope(exc, tool_name)
-    except Exception:
+    except Exception:  # noqa: BLE001 - sanitize every unexpected MCP boundary failure
         return error_envelope(InternalError("Internal error"), tool_name)
     finally:
         if close and client is not None:

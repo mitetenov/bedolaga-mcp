@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import Mapping
+from collections.abc import Mapping
 
 import uvicorn
 from starlette.applications import Starlette
@@ -58,7 +58,7 @@ def create_app() -> Starlette:
     server = create_server()
 
     @server.custom_route("/health", methods=["GET"])
-    async def health(request) -> JSONResponse:  # noqa: ARG001 (signature fixed by Starlette)
+    async def health(request) -> JSONResponse:
         return JSONResponse(
             {
                 "status": "UP",

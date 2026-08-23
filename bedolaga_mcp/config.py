@@ -10,8 +10,8 @@ The API key is never logged or printed.
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping
 
 from .errors import NotConfiguredError
 
@@ -95,4 +95,4 @@ def load_config(environ: Mapping[str, str] | None = None) -> Config:
     )
 
 
-__all__ = ["Config", "DEFAULT_TIMEOUT_MS", "load_config"]
+__all__ = ["DEFAULT_TIMEOUT_MS", "Config", "load_config"]

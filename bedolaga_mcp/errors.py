@@ -148,20 +148,20 @@ def make_error(code: str, message: str, *, detail: str | None = None) -> Bedolag
 
 
 __all__ = [
-    "BedolagaError",
     "BY_CODE",
+    "MAX_BODY_IN_EXCEPTION",
+    "SPEC_ERROR_CODES",
+    "BedolagaError",
+    "IdentityUnavailableError",
+    "InternalError",
     "InvalidInputError",
     "InvalidUpstreamResponseError",
-    "InternalError",
-    "MAX_BODY_IN_EXCEPTION",
     "NotConfiguredError",
     "RateLimitedError",
-    "SPEC_ERROR_CODES",
     "UnauthorizedError",
     "UpstreamTimeoutError",
     "UpstreamUnavailableError",
     "UserNotFoundError",
-    "IdentityUnavailableError",
     "bounded_body",
     "make_error",
 ]

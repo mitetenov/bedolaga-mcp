@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Thin compatibility launcher for the stdio transport.
 
 Runs the MCP SDK stdio handshake on the same server factory and tool registry

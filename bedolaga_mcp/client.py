@@ -10,7 +10,8 @@ logs or returned payloads.
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any, Self
 
 import httpx
 
@@ -44,10 +45,10 @@ class BedolagaClient:
         self._timeout = httpx.Timeout(config.timeout_seconds)
         self._client = httpx.AsyncClient(timeout=self._timeout)
 
-    async def __aenter__(self) -> "BedolagaClient":
+    async def __aenter__(self) -> Self:
         return self
 
-    async def __aexit__(self, *exc_info: Any) -> None:
+    async def __aexit__(self, *exc_info: object) -> None:
         await self.aclose()
 
     async def aclose(self) -> None:
@@ -119,7 +120,7 @@ class BedolagaClient:
         except _TIMEOUT_CLASSES as exc:
             raise UpstreamTimeoutError("Bedolaga API request timed out") from exc
         except _NETWORK_CLASSES as exc:
-            raise UpstreamTimeoutError("Bedolaga API is unreachable") from exc
+            raise UpstreamUnavailableError("Bedolaga API is unreachable") from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailableError(
                 "Bedolaga API request failed"

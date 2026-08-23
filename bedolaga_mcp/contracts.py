@@ -32,6 +32,7 @@ or non-integer kopeks amount yields an honest ``None`` (rendered as JSON
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any, Final
 
 from .errors import SPEC_ERROR_CODES
@@ -233,7 +234,7 @@ def latest_completed_deposit(items: Any) -> dict[str, Any] | None:
     completed = _completed_of_type(items, "deposit")
     if not completed:
         return None
-    return _summary_from_latest(max(completed, key=_time_key), "deposit")
+    return _summary_from_latest(max(completed, key=transaction_time_key), "deposit")
 
 
 def latest_completed_subscription_purchase(items: Any) -> dict[str, Any] | None:
@@ -246,7 +247,7 @@ def latest_completed_subscription_purchase(items: Any) -> dict[str, Any] | None:
     if not completed:
         return None
     return _summary_from_latest(
-        max(completed, key=_time_key), "subscription_purchase"
+        max(completed, key=transaction_time_key), "subscription_purchase"
     )
 
 
@@ -286,22 +287,42 @@ def _completed_of_type(items: Any, raw_type: str) -> list[dict[str, Any]]:
     return result
 
 
-def _time_key(tx: dict[str, Any]) -> tuple[str, str]:
-    created = tx.get("created_at")
-    completed = tx.get("completed_at")
-    return (
-        created if isinstance(created, str) else "",
-        completed if isinstance(completed, str) else "",
-    )
+_MIN_TIMESTAMP: Final = datetime.min.replace(tzinfo=UTC)
 
 
-def _effective_timestamp(tx: dict[str, Any]) -> str | None:
+def transaction_time_key(tx: dict[str, Any]) -> tuple[datetime, datetime]:
+    """Return a timezone-safe ordering key for one transaction.
+
+    Upstream timestamps are ISO-8601 strings and can legally carry different
+    UTC offsets. Comparing their textual representations can therefore invert
+    chronology. Naive values are interpreted as UTC for compatibility with
+    older Bedolaga payloads; malformed or missing values sort before valid
+    timestamps without raising.
+    """
+    effective = _effective_timestamp(tx)
+    completed = _parse_timestamp(tx.get("completed_at"))
+    return effective or _MIN_TIMESTAMP, completed or _MIN_TIMESTAMP
+
+
+def _effective_timestamp(tx: dict[str, Any]) -> datetime | None:
     """Best timestamp for ordering: created_at preferred, else completed_at."""
     for field in ("created_at", "completed_at"):
-        value = tx.get(field)
-        if isinstance(value, str) and value:
-            return value
+        parsed = _parse_timestamp(tx.get(field))
+        if parsed is not None:
+            return parsed
     return None
+
+
+def _parse_timestamp(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip())
+    except (ValueError, OverflowError):
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 def _summary_from_latest(
@@ -344,6 +365,8 @@ def bot_subscription_record(raw_sub: Any) -> dict[str, Any] | None:
         "bot_record_status": raw_sub.get("status"),
         "bot_record_effective_status": raw_sub.get("actual_status"),
         "is_trial": raw_sub.get("is_trial"),
+        "tariff_id": raw_sub.get("tariff_id"),
+        "tariff_name": raw_sub.get("tariff_name"),
         "start_date": raw_sub.get("start_date"),
         "end_date": raw_sub.get("end_date"),
         "autopay_enabled": raw_sub.get("autopay_enabled"),
@@ -355,18 +378,45 @@ def bot_subscription_record(raw_sub: Any) -> dict[str, Any] | None:
 def bot_subscription_records(raw_user: Any) -> list[dict[str, Any]]:
     """Return safe bot-side subscription records from a raw user payload.
 
-    Accepts the pinned single ``subscription`` object and, defensively, a list,
-    so a future upstream change to multiple records stays safe and total.
+    The pinned upstream contract exposes both ``subscriptions`` (the complete
+    list) and the legacy/current ``subscription`` object. Prefer the complete
+    list when it contains valid records, deduplicate it by record id, and fall
+    back to the single object for older responses.
     """
     if not isinstance(raw_user, dict):
         return []
-    sub = raw_user.get("subscription")
-    if isinstance(sub, list):
-        return [r for r in (bot_subscription_record(s) for s in sub) if r is not None]
-    if isinstance(sub, dict):
-        record = bot_subscription_record(sub)
-        return [record] if record is not None else []
-    return []
+
+    subscriptions = raw_user.get("subscriptions")
+    records = _normalized_subscription_records(subscriptions)
+    if records:
+        return records
+
+    subscription = raw_user.get("subscription")
+    record = bot_subscription_record(subscription)
+    return [record] if record is not None else []
+
+
+def _normalized_subscription_records(raw_subscriptions: Any) -> list[dict[str, Any]]:
+    if not isinstance(raw_subscriptions, list):
+        return []
+
+    records: list[dict[str, Any]] = []
+    seen_ids: set[int | str] = set()
+    for raw_subscription in raw_subscriptions:
+        record = bot_subscription_record(raw_subscription)
+        if record is None:
+            continue
+        record_id = record.get("id")
+        if (
+            isinstance(record_id, (int, str))
+            and not isinstance(record_id, bool)
+            and record_id in seen_ids
+        ):
+            continue
+        if isinstance(record_id, (int, str)) and not isinstance(record_id, bool):
+            seen_ids.add(record_id)
+        records.append(record)
+    return records
 
 
 # --- Fixed meta notes ------------------------------------------------------
@@ -413,4 +463,5 @@ __all__ = [
     "total_earned_money",
     "transaction_category",
     "transaction_direction",
+    "transaction_time_key",
 ]

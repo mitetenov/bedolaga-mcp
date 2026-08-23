@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Thin compatibility launcher for the Streamable HTTP transport.
 
 Starts the sessionful Streamable HTTP server on ``/`` (same lifecycle as the
