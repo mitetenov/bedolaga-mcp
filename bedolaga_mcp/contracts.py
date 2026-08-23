@@ -474,6 +474,21 @@ PAYMENT_STATUS_META_NOTE: Final = (
     "This does not expose payment-provider attempt status. not_completed is not proof of pending or failure."
 )
 
+#: Fixed meta explanation for the promo code payload.
+PROMOCODE_META_NOTE: Final = (
+    "Global validity only; the existing API cannot check whether this user already used or may apply the code."
+)
+
+
+def mask_code(code: str) -> str:
+    """Mask a promo code for safe diagnostic output without revealing full plaintext."""
+    clean = code.strip()
+    if len(clean) >= 4:
+        return f"{clean[:2]}***{clean[-2:]}"
+    if len(clean) >= 2:
+        return f"{clean[:1]}***{clean[-1:]}"
+    return "***"
+
 
 __all__ = [
     "BILLING_META_NOTE",
@@ -484,6 +499,7 @@ __all__ = [
     "ERROR_RETRYABLE",
     "PAYMENT_CATEGORIES",
     "PAYMENT_STATUS_META_NOTE",
+    "PROMOCODE_META_NOTE",
     "REFERRAL_META_NOTE",
     "SOURCE",
     "SUBSCRIPTION_META_NOTE",
@@ -500,6 +516,7 @@ __all__ = [
     "latest_completed_subscription_purchase",
     "make_error_envelope",
     "make_success_envelope",
+    "mask_code",
     "money_pair",
     "month_earned_money",
     "parse_timestamp",
@@ -509,6 +526,7 @@ __all__ = [
     "transaction_direction",
     "transaction_time_key",
 ]
+
 
 
 

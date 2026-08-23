@@ -17,6 +17,7 @@ never returned even when upstream returns more.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 
 from . import contracts
@@ -449,15 +450,112 @@ def sanitize_payment_status(
     }
 
 
+def sanitize_promocode(
+    raw_promo: dict[str, Any] | None,
+    code_input: str,
+    *,
+    lookup_incomplete: bool = False,
+) -> dict[str, Any]:
+    """Build the safe ``bedolaga_promocode_check`` payload.
+
+    Masks the code plaintext, evaluates global validity and reason codes, and
+    returns bonus amounts and usage limits without exposing creator or third-party
+    data.
+    """
+    masked = contracts.mask_code(code_input)
+    if raw_promo is None:
+        reason = "lookup_incomplete" if lookup_incomplete else "not_found"
+        return {
+            "scope": "global_promocode_definition",
+            "code_masked": masked,
+            "globally_valid": False,
+            "reason_code": reason,
+            "type": None,
+            "balance_bonus_kopeks": None,
+            "balance_bonus_rubles": None,
+            "subscription_days": 0,
+            "traffic_gb": 0,
+            "uses_left": None,
+            "valid_from": None,
+            "valid_until": None,
+            "user_eligibility": "unknown",
+            "meta": contracts.PROMOCODE_META_NOTE,
+        }
+
+    is_active = raw_promo.get("is_active") is True
+    is_valid = raw_promo.get("is_valid") is True
+    valid_from_str = raw_promo.get("valid_from")
+    valid_until_str = raw_promo.get("valid_until")
+    uses_left = raw_promo.get("uses_left")
+    if (
+        uses_left is None
+        and raw_promo.get("max_uses") is not None
+        and raw_promo.get("current_uses") is not None
+    ):
+        uses_left = max(0, raw_promo["max_uses"] - raw_promo["current_uses"])
+
+    now = datetime.now(UTC)
+    parsed_from = contracts.parse_timestamp(valid_from_str)
+    parsed_until = contracts.parse_timestamp(valid_until_str)
+
+    if not is_active:
+        globally_valid = False
+        reason_code = "inactive"
+    elif parsed_from is not None and parsed_from > now:
+        globally_valid = False
+        reason_code = "not_yet_valid"
+    elif (
+        not is_valid
+        or (parsed_until is not None and parsed_until < now)
+        or (isinstance(uses_left, int) and not isinstance(uses_left, bool) and uses_left <= 0)
+    ):
+        globally_valid = False
+        reason_code = "expired_or_exhausted"
+    else:
+        globally_valid = True
+        reason_code = None
+
+    bonus = contracts.balance_money(raw_promo.get("balance_bonus_kopeks"))
+    sub_days = raw_promo.get("subscription_days")
+    if isinstance(sub_days, bool) or not isinstance(sub_days, int) or sub_days < 0:
+        sub_days = 0
+    traffic = raw_promo.get("traffic_gb")
+    if isinstance(traffic, bool) or not isinstance(traffic, int) or traffic < 0:
+        traffic = 0
+
+    return {
+        "scope": "global_promocode_definition",
+        "code_masked": masked,
+        "globally_valid": globally_valid,
+        "reason_code": reason_code,
+        "type": raw_promo.get("type"),
+        "balance_bonus_kopeks": bonus["balance_kopeks"] if bonus else None,
+        "balance_bonus_rubles": bonus["balance_rubles"] if bonus else None,
+        "subscription_days": sub_days,
+        "traffic_gb": traffic,
+        "uses_left": (
+            uses_left
+            if isinstance(uses_left, int) and not isinstance(uses_left, bool)
+            else None
+        ),
+        "valid_from": valid_from_str,
+        "valid_until": valid_until_str,
+        "user_eligibility": "unknown",
+        "meta": contracts.PROMOCODE_META_NOTE,
+    }
+
+
 __all__ = [
     "REFERRAL_REWARDS_MAX",
     "sanitize_billing",
     "sanitize_payment_status",
+    "sanitize_promocode",
     "sanitize_referrals",
     "sanitize_subscriptions",
     "sanitize_tickets",
     "sanitize_user",
 ]
+
 
 
 
