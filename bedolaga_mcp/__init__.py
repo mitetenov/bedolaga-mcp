@@ -10,6 +10,6 @@ Importing this package has no side effects: no client is created and no tool is
 registered until a transport entrypoint starts the server.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 __all__ = ["__version__"]
