@@ -14,7 +14,7 @@ MCP-сервер для получения пользовательских фа
 | `bedolaga_transactions` | заменён на `bedolaga_billing_get` |
 | `bedolaga_subscription` | **не имеет аналога в Bedolaga MCP**. Фактический статус подписки и состояние VPN-панели проверяются через отдельный [mcp-remnawave](https://github.com/mitetenov/mcp-remnawave), а не через этот сервер |
 
-Также в 1.0.0 удалён устаревший HTTP-путь `/mcp`: sessionful Streamable HTTP теперь обслуживается на корневом endpoint `/`, как у mcp-remnawave. Публикация образа использует только теги `:{sha}` и `:{version}`; тега `:latest` нет.
+Также в 1.0.0 удалён устаревший HTTP-путь `/mcp`: sessionful Streamable HTTP теперь обслуживается на корневом endpoint `/`, как у mcp-remnawave. Каждая публикация образа получает три тега: `:latest`, `:{version}` и `:{sha}`.
 
 Версия 1.0.0 — первый контракт с корректными API routes, structured результатами и явной границей ответственности с Remnawave.
 

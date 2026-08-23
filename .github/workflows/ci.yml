@@ -40,10 +40,11 @@ jobs:
         run: |
           VER=$(python3 -c "from bedolaga_mcp import __version__; print(__version__)")
           echo "tag=$VER" >> "$GITHUB_OUTPUT"
-      - name: Build and push (immutable commit tag + version tag, no latest)
+      - name: Build and push (latest + version + immutable commit tag)
         uses: docker/build-push-action@v7
         with:
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/bedolaga-mcp:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/bedolaga-mcp:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/bedolaga-mcp:${{ steps.version.outputs.tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/bedolaga-mcp:${{ github.sha }}
