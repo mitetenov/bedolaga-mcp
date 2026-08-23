@@ -260,8 +260,55 @@ class SanitizerContractTests(unittest.TestCase):
         self.assertNotIn("media_files", keys)
         self.assertNotIn("user_id", keys)
 
+    def test_payment_status_sanitizer(self) -> None:
+        raw_txs = {
+            "items": [
+                {
+                    "id": 1,
+                    "user_id": 42,
+                    "type": "deposit",
+                    "is_completed": True,
+                    "amount_kopeks": 100_000,
+                    "payment_method": "tinkoff",
+                    "external_id": "secret-ext-id",
+                    "created_at": "2026-08-01T12:00:00Z",
+                    "completed_at": "2026-08-01T12:01:00Z",
+                },
+                {
+                    "id": 2,
+                    "user_id": 42,
+                    "type": "referral_reward",
+                    "is_completed": True,
+                    "amount_kopeks": 5_000,
+                },
+                {
+                    "id": 3,
+                    "user_id": 999,  # another user
+                    "type": "deposit",
+                    "is_completed": True,
+                    "amount_kopeks": 10_000,
+                },
+            ]
+        }
+
+        from bedolaga_mcp.sanitize import sanitize_payment_status
+
+        result = sanitize_payment_status(raw_txs, owner_id=42, limit=5)
+        self.assertEqual(result["scope"], "bedolaga_accounting_transactions")
+        self.assertEqual(len(result["payments"]), 1)
+        p = result["payments"][0]
+        self.assertEqual(p["id"], 1)
+        self.assertEqual(p["category"], "deposit")
+        self.assertEqual(p["accounting_status"], "completed")
+        self.assertEqual(p["amount_kopeks"], 100_000)
+        self.assertEqual(p["amount_rubles"], 1000.0)
+        keys = _all_keys(result)
+        self.assertNotIn("external_id", keys)
+        self.assertNotIn("user_id", keys)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 

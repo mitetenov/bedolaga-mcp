@@ -117,6 +117,11 @@ TRANSACTION_CATEGORIES: Final[dict[str, str]] = {
     "poll_reward": "poll_reward",
 }
 
+#: Categories considered financial payment transactions (excluding rewards/polls).
+PAYMENT_CATEGORIES: Final[frozenset[str]] = frozenset(
+    {"deposit", "subscription_purchase", "gift_purchase", "refund", "failed_refund"}
+)
+
 #: Category used for any raw type not in :data:`TRANSACTION_CATEGORIES`.
 UNKNOWN_CATEGORY: Final = "unknown"
 
@@ -134,7 +139,22 @@ DEBIT_TYPES: Final[frozenset[str]] = frozenset(
 UNKNOWN_DIRECTION: Final = "unknown"
 
 
+def accounting_status(is_completed: object) -> str:
+    """Map the boolean completion flag to a strict accounting status.
+
+    Returns ``completed`` for literal ``True``, ``not_completed`` for literal
+    ``False``, and ``unknown`` for anything else. Never returns 'pending',
+    'failed', or 'cancelled'.
+    """
+    if is_completed is True:
+        return "completed"
+    if is_completed is False:
+        return "not_completed"
+    return "unknown"
+
+
 def transaction_category(raw_type: Any) -> str:
+
     """Map a raw Bedolaga transaction type to a fixed category.
 
     Unknown/future types return ``unknown``; the caller preserves the safe
@@ -449,6 +469,11 @@ TICKETS_META_NOTE: Final = (
     "Tickets belong to the account owner only; messages and media are intentionally excluded."
 )
 
+#: Fixed meta explanation for the payment status payload.
+PAYMENT_STATUS_META_NOTE: Final = (
+    "This does not expose payment-provider attempt status. not_completed is not proof of pending or failure."
+)
+
 
 __all__ = [
     "BILLING_META_NOTE",
@@ -457,6 +482,8 @@ __all__ = [
     "DEBIT_TYPES",
     "ERROR_CODES",
     "ERROR_RETRYABLE",
+    "PAYMENT_CATEGORIES",
+    "PAYMENT_STATUS_META_NOTE",
     "REFERRAL_META_NOTE",
     "SOURCE",
     "SUBSCRIPTION_META_NOTE",
@@ -464,6 +491,7 @@ __all__ = [
     "TRANSACTION_CATEGORIES",
     "UNKNOWN_CATEGORY",
     "UNKNOWN_DIRECTION",
+    "accounting_status",
     "amount_money",
     "balance_money",
     "bot_subscription_record",
@@ -481,5 +509,6 @@ __all__ = [
     "transaction_direction",
     "transaction_time_key",
 ]
+
 
 

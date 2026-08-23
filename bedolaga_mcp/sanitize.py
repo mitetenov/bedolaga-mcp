@@ -388,13 +388,76 @@ def sanitize_tickets(
     }
 
 
+def sanitize_payment_status(
+    raw_transactions: dict[str, Any] | None,
+    owner_id: int,
+    limit: int = 5,
+) -> dict[str, Any]:
+    """Build the safe ``bedolaga_payment_status_get`` payload.
+
+    Returns the owner's financial transactions (deposit, subscription_purchase,
+    gift_purchase, refund, failed_refund) with strict accounting_status
+    (completed, not_completed, unknown). Excludes third-party data and provider
+    secrets.
+    """
+    if not isinstance(raw_transactions, dict):
+        return {
+            "scope": "bedolaga_accounting_transactions",
+            "payments": [],
+            "meta": contracts.PAYMENT_STATUS_META_NOTE,
+        }
+
+    items = raw_transactions.get("items")
+    if not isinstance(items, list):
+        return {
+            "scope": "bedolaga_accounting_transactions",
+            "payments": [],
+            "meta": contracts.PAYMENT_STATUS_META_NOTE,
+        }
+
+    payments = []
+    for tx in items:
+        if not isinstance(tx, dict):
+            continue
+        if tx.get("user_id") is not None and tx.get("user_id") != owner_id:
+            continue
+        cat = contracts.transaction_category(tx.get("type"))
+        if cat not in contracts.PAYMENT_CATEGORIES:
+            continue
+        amount = contracts.amount_money(tx.get("amount_kopeks"))
+        payments.append(
+            {
+                "id": tx.get("id"),
+                "category": cat,
+                "direction": contracts.transaction_direction(tx.get("type")),
+                "raw_type": tx.get("type"),
+                "amount_kopeks": amount["amount_kopeks"] if amount else None,
+                "amount_rubles": amount["amount_rubles"] if amount else None,
+                "payment_method": tx.get("payment_method"),
+                "accounting_status": contracts.accounting_status(tx.get("is_completed")),
+                "created_at": tx.get("created_at"),
+                "completed_at": tx.get("completed_at"),
+            }
+        )
+
+    payments.sort(key=contracts.transaction_time_key, reverse=True)
+    capped_limit = _history_limit(limit)
+    return {
+        "scope": "bedolaga_accounting_transactions",
+        "payments": payments[:capped_limit],
+        "meta": contracts.PAYMENT_STATUS_META_NOTE,
+    }
+
+
 __all__ = [
     "REFERRAL_REWARDS_MAX",
     "sanitize_billing",
+    "sanitize_payment_status",
     "sanitize_referrals",
     "sanitize_subscriptions",
     "sanitize_tickets",
     "sanitize_user",
 ]
+
 
 
