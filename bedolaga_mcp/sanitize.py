@@ -92,6 +92,94 @@ def sanitize_billing(
     }
 
 
+def sanitize_subscriptions(
+    raw_user: dict[str, Any] | None,
+    raw_subscriptions: list[dict[str, Any]] | None,
+    owner_id: int,
+) -> dict[str, Any]:
+    """Build the safe ``bedolaga_subscription_get`` payload.
+
+    Merges lifecycle records from /subscriptions with tariff data from /users,
+    enforcing ownership (records with user_id != owner_id are excluded) and
+    excluding secrets (subscription URLs, crypto links, connected squads,
+    traffic/device limits).
+
+    Results are sorted effective-active first, then end_date newest-first.
+    """
+    tariff_map: dict[Any, dict[str, Any]] = {}
+    if isinstance(raw_user, dict):
+        # Extract tariff info from raw_user's subscriptions / subscription
+        subs = raw_user.get("subscriptions")
+        if isinstance(subs, list):
+            for s in subs:
+                if isinstance(s, dict) and s.get("id") is not None:
+                    tariff_map[s["id"]] = {
+                        "tariff_id": s.get("tariff_id"),
+                        "tariff_name": s.get("tariff_name"),
+                    }
+        sub = raw_user.get("subscription")
+        if isinstance(sub, dict) and sub.get("id") is not None:
+            tariff_map.setdefault(
+                sub["id"],
+                {
+                    "tariff_id": sub.get("tariff_id"),
+                    "tariff_name": sub.get("tariff_name"),
+                },
+            )
+
+    normalized: list[dict[str, Any]] = []
+    seen_ids: set[Any] = set()
+
+    if isinstance(raw_subscriptions, list) and raw_subscriptions:
+        for item in raw_subscriptions:
+            if not isinstance(item, dict):
+                continue
+            # Ownership check: if user_id is in item and != owner_id, skip
+            if item.get("user_id") is not None and item.get("user_id") != owner_id:
+                continue
+            rec = contracts.bot_subscription_record(item)
+            if rec is None:
+                continue
+            rec_id = rec.get("id")
+            if rec_id is not None and rec_id in seen_ids:
+                continue
+            if rec_id is not None:
+                seen_ids.add(rec_id)
+            # Fill tariff_name from user tariff_map if missing in rec
+            if rec_id in tariff_map:
+                t_info = tariff_map[rec_id]
+                if rec.get("tariff_id") is None and t_info.get("tariff_id") is not None:
+                    rec["tariff_id"] = t_info["tariff_id"]
+                if rec.get("tariff_name") is None and t_info.get("tariff_name") is not None:
+                    rec["tariff_name"] = t_info["tariff_name"]
+            normalized.append(rec)
+    elif isinstance(raw_user, dict):
+        normalized = contracts.bot_subscription_records(raw_user)
+
+    # Sort: effective-active first, then end_date newest-first
+    def _sort_key(record: dict[str, Any]) -> tuple[int, float]:
+        eff = record.get("bot_record_effective_status") or record.get("bot_record_status")
+        is_active = 0 if eff == "active" else 1
+        parsed_end = contracts.parse_timestamp(record.get("end_date"))
+        ts = parsed_end.timestamp() if parsed_end is not None else float("-inf")
+        # For newest-first within the same active group, negate ts
+        return (is_active, -ts)
+
+    sorted_records = sorted(normalized, key=_sort_key)
+    active_count = sum(
+        1
+        for r in sorted_records
+        if (r.get("bot_record_effective_status") or r.get("bot_record_status")) == "active"
+    )
+
+    return {
+        "has_subscription_records": len(sorted_records) > 0,
+        "active_record_count": active_count,
+        "subscriptions": sorted_records,
+        "meta": contracts.SUBSCRIPTION_META_NOTE,
+    }
+
+
 def sanitize_referrals(
     raw_referrer_detail: dict[str, Any],
     *,
@@ -262,5 +350,7 @@ __all__ = [
     "REFERRAL_REWARDS_MAX",
     "sanitize_billing",
     "sanitize_referrals",
+    "sanitize_subscriptions",
     "sanitize_user",
 ]
+

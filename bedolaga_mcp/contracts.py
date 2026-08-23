@@ -300,20 +300,20 @@ def transaction_time_key(tx: dict[str, Any]) -> tuple[datetime, datetime]:
     timestamps without raising.
     """
     effective = _effective_timestamp(tx)
-    completed = _parse_timestamp(tx.get("completed_at"))
+    completed = parse_timestamp(tx.get("completed_at"))
     return effective or _MIN_TIMESTAMP, completed or _MIN_TIMESTAMP
 
 
 def _effective_timestamp(tx: dict[str, Any]) -> datetime | None:
     """Best timestamp for ordering: created_at preferred, else completed_at."""
     for field in ("created_at", "completed_at"):
-        parsed = _parse_timestamp(tx.get(field))
+        parsed = parse_timestamp(tx.get(field))
         if parsed is not None:
             return parsed
     return None
 
 
-def _parse_timestamp(value: Any) -> datetime | None:
+def parse_timestamp(value: Any) -> datetime | None:
     if not isinstance(value, str) or not value.strip():
         return None
     try:
@@ -323,6 +323,7 @@ def _parse_timestamp(value: Any) -> datetime | None:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=UTC)
     return parsed.astimezone(UTC)
+
 
 
 def _summary_from_latest(
@@ -367,12 +368,14 @@ def bot_subscription_record(raw_sub: Any) -> dict[str, Any] | None:
         "is_trial": raw_sub.get("is_trial"),
         "tariff_id": raw_sub.get("tariff_id"),
         "tariff_name": raw_sub.get("tariff_name"),
+        "created_at": raw_sub.get("created_at"),
         "start_date": raw_sub.get("start_date"),
         "end_date": raw_sub.get("end_date"),
         "autopay_enabled": raw_sub.get("autopay_enabled"),
         "autopay_days_before": raw_sub.get("autopay_days_before"),
         "note": BOT_RECORD_NOTE,
     }
+
 
 
 def bot_subscription_records(raw_user: Any) -> list[dict[str, Any]]:
@@ -436,6 +439,11 @@ REFERRAL_META_NOTE: Final = (
     "is intentionally excluded."
 )
 
+#: Fixed meta explanation for the subscription payload.
+SUBSCRIPTION_META_NOTE: Final = (
+    "Bedolaga subscription records are not the VPN panel status."
+)
+
 
 __all__ = [
     "BILLING_META_NOTE",
@@ -446,6 +454,7 @@ __all__ = [
     "ERROR_RETRYABLE",
     "REFERRAL_META_NOTE",
     "SOURCE",
+    "SUBSCRIPTION_META_NOTE",
     "TRANSACTION_CATEGORIES",
     "UNKNOWN_CATEGORY",
     "UNKNOWN_DIRECTION",
@@ -459,9 +468,11 @@ __all__ = [
     "make_success_envelope",
     "money_pair",
     "month_earned_money",
+    "parse_timestamp",
     "purchased_after_latest_deposit",
     "total_earned_money",
     "transaction_category",
     "transaction_direction",
     "transaction_time_key",
 ]
+
