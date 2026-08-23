@@ -210,7 +210,58 @@ class SanitizerContractTests(unittest.TestCase):
         self.assertNotIn("traffic_limit_gb", keys)
         self.assertNotIn("device_limit", keys)
 
+    def test_tickets_payload_privacy_and_ownership(self) -> None:
+        raw_tickets = [
+            {
+                "id": 101,
+                "user_id": 42,
+                "title": "Cannot connect",
+                "status": "open",
+                "priority": "high",
+                "created_at": "2026-08-01T10:00:00Z",
+                "updated_at": "2026-08-01T11:00:00Z",
+                "closed_at": None,
+                "messages": [{"id": 1, "body": "Sensitive chat message"}],
+                "reply_blocks": [{"secret": "data"}],
+                "media_files": ["attachment.png"],
+            },
+            {
+                "id": 102,
+                "user_id": 999,  # other user
+                "title": "Other user ticket",
+                "status": "closed",
+                "priority": "low",
+            },
+        ]
+
+        from bedolaga_mcp.sanitize import sanitize_tickets
+
+        result = sanitize_tickets(raw_tickets, owner_id=42)
+
+        self.assertTrue(result["has_tickets"])
+        self.assertEqual(len(result["tickets"]), 1)
+        ticket = result["tickets"][0]
+        self.assertEqual(ticket["id"], 101)
+        self.assertEqual(
+            set(ticket.keys()),
+            {
+                "id",
+                "title",
+                "status",
+                "priority",
+                "created_at",
+                "updated_at",
+                "closed_at",
+            },
+        )
+        keys = _all_keys(result)
+        self.assertNotIn("messages", keys)
+        self.assertNotIn("reply_blocks", keys)
+        self.assertNotIn("media_files", keys)
+        self.assertNotIn("user_id", keys)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

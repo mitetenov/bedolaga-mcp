@@ -346,11 +346,55 @@ def _history_limit(limit: Any) -> int:
     return _DEFAULT_HISTORY_LIMIT
 
 
+def sanitize_tickets(
+    raw_tickets: list[dict[str, Any]] | None,
+    owner_id: int,
+) -> dict[str, Any]:
+    """Build the safe ``bedolaga_tickets_get`` payload.
+
+    Returns the caller's own tickets with status, priority, and lifecycle dates.
+    Messages, reply blocks, media, attachments, and third-party tickets are
+    intentionally excluded.
+    """
+    if not isinstance(raw_tickets, list):
+        return {
+            "has_tickets": False,
+            "tickets": [],
+            "meta": contracts.TICKETS_META_NOTE,
+        }
+
+    tickets = []
+    for item in raw_tickets:
+        if not isinstance(item, dict):
+            continue
+        if item.get("user_id") is not None and item.get("user_id") != owner_id:
+            continue
+        tickets.append(
+            {
+                "id": item.get("id"),
+                "title": item.get("title"),
+                "status": item.get("status"),
+                "priority": item.get("priority"),
+                "created_at": item.get("created_at"),
+                "updated_at": item.get("updated_at"),
+                "closed_at": item.get("closed_at"),
+            }
+        )
+
+    return {
+        "has_tickets": len(tickets) > 0,
+        "tickets": tickets,
+        "meta": contracts.TICKETS_META_NOTE,
+    }
+
+
 __all__ = [
     "REFERRAL_REWARDS_MAX",
     "sanitize_billing",
     "sanitize_referrals",
     "sanitize_subscriptions",
+    "sanitize_tickets",
     "sanitize_user",
 ]
+
 

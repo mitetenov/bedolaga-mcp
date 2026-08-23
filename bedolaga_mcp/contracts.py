@@ -444,6 +444,11 @@ SUBSCRIPTION_META_NOTE: Final = (
     "Bedolaga subscription records are not the VPN panel status."
 )
 
+#: Fixed meta explanation for the tickets payload.
+TICKETS_META_NOTE: Final = (
+    "Tickets belong to the account owner only; messages and media are intentionally excluded."
+)
+
 
 __all__ = [
     "BILLING_META_NOTE",
@@ -455,6 +460,7 @@ __all__ = [
     "REFERRAL_META_NOTE",
     "SOURCE",
     "SUBSCRIPTION_META_NOTE",
+    "TICKETS_META_NOTE",
     "TRANSACTION_CATEGORIES",
     "UNKNOWN_CATEGORY",
     "UNKNOWN_DIRECTION",
@@ -475,4 +481,5 @@ __all__ = [
     "transaction_direction",
     "transaction_time_key",
 ]
+
 
