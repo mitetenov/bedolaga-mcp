@@ -29,6 +29,8 @@ def _run_stdio() -> None:
     server = create_server()
 
     async def _serve() -> None:
+        # MCP SDK v2's MCPServer keeps the same run_stdio_async() coroutine the
+        # v1 SDK's "fast" server class exposed; only server construction changed.
         await server.run_stdio_async()
 
     async def _shutdown() -> None:

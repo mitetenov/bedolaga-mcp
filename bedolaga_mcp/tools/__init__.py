@@ -20,7 +20,7 @@ client is created **lazily** on the first tool call (importing this module has
 no side effects) and can be closed on shutdown via :func:`close_client` (a
 later task wires it into the server lifespan):
 
-* **FastMCP / HTTP path** (``register_tools``): handlers receive the shared
+* **MCPServer / HTTP path** (``register_tools``): handlers receive the shared
   process-lifetime client created by :func:`_get_client`. One connection pool
   serves every request on the server's single event loop.
 
@@ -32,19 +32,24 @@ later task wires it into the server lifespan):
   migrates stdio onto the same shared client.
 
 Schemas are derived from the registered handler annotations via
-``func_metadata`` — the exact derivation FastMCP uses internally — so
-``list_tools``, ``call_tool`` and ``register_tools`` always agree on the input
-schema.
+``func_metadata`` — the exact derivation the MCP SDK v2 ``MCPServer`` uses
+internally — so ``list_tools``, ``call_tool`` and ``register_tools`` always
+agree on the input schema. Every handler is registered with
+``structured_output=False`` so the published contract stays JSON-in-text-
+content, not the SDK's auto-detected structured-output schema.
 """
 
 from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
-from mcp.server.fastmcp.utilities.func_metadata import func_metadata
+from mcp.server.mcpserver.utilities.func_metadata import func_metadata
 from pydantic import Field
+
+if TYPE_CHECKING:
+    from mcp.server import MCPServer
 
 from ..client import BedolagaClient
 from ..config import load_config
@@ -349,8 +354,9 @@ _BY_NAME: dict[str, dict[str, Any]] = {tool["name"]: tool for tool in _TOOLS}
 def _input_schema(handler: Any) -> dict[str, Any]:
     """Derive the JSON Schema from the handler annotations.
 
-    Uses the same derivation FastMCP uses internally, so the schema reported
-    by :func:`list_tools` and the schema FastMCP generates are identical.
+    Uses the same derivation the MCP SDK v2 ``MCPServer`` uses internally, so
+    the schema reported by :func:`list_tools` and the schema the SDK generates
+    are identical.
     """
     return func_metadata(handler).arg_model.model_json_schema()
 
@@ -370,8 +376,9 @@ def list_tools() -> list[dict[str, Any]]:
 def call_tool(name: str, arguments: dict[str, Any]) -> Any:
     """Dispatch a ``tools/call`` through the registry handler.
 
-    Arguments are validated with the same pydantic model FastMCP uses, then the
-    real handler runs on a fresh per-call client (see the module docstring).
+    Arguments are validated with the same pydantic model the MCP SDK v2
+    ``MCPServer`` uses, then the real handler runs on a fresh per-call client
+    (see the module docstring).
     Raises :class:`KeyError` for unknown tool names and pydantic
     ``ValidationError`` for invalid arguments; callers decide how to map those
     onto the error envelope.
@@ -392,12 +399,19 @@ def call_tool(name: str, arguments: dict[str, Any]) -> Any:
     )
 
 
-def register_tools(server: Any) -> None:
-    """Register all eight tools (name, description, handler) on a FastMCP server."""
+def register_tools(server: MCPServer) -> None:
+    """Register all eight tools (name, description, handler) on an ``MCPServer``.
+
+    ``structured_output=False`` is passed explicitly for every handler so the
+    SDK does not auto-detect a structured-output schema from the ``dict[str,
+    Any]`` return annotation; the published contract is JSON-in-text-content,
+    as documented, unchanged by this SDK migration.
+    """
     for tool in _TOOLS:
         server.add_tool(
             tool["handler"],
             name=tool["name"],
             description=tool["description"],
+            structured_output=False,
         )
 
