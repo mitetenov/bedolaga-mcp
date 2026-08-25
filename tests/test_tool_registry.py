@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import unittest
 from typing import Any
 
@@ -81,6 +82,11 @@ class StdioHttpSchemaParityTests(unittest.TestCase):
 
     def test_real_mcpserver_matches_the_registry_schema_exactly(self) -> None:
         server = create_server()
+        # MCPServer exposes no public "list registered tools" API (only
+        # async tools/list over a transport); reaching into the private
+        # _tool_manager is the only way to get the schemas synchronously for
+        # this parity check. If a future SDK bump renames/removes
+        # _tool_manager, this is the line that will need updating.
         registered = {tool.name: tool.parameters for tool in server._tool_manager.list_tools()}  # noqa: SLF001
 
         registry = {tool["name"]: tool["inputSchema"] for tool in list_tools()}
@@ -93,6 +99,19 @@ class StdioHttpSchemaParityTests(unittest.TestCase):
                 registry[name],
                 msg=f"{name}: MCPServer-registered schema and list_tools() schema diverge",
             )
+
+
+class ServerLoggingLevelTests(unittest.TestCase):
+    """``MCPServer`` defaults to INFO and, at INFO, the SDK's own transport
+    code logs raw session UUIDs on every session create/terminate
+    (``streamable_http_manager.py``, ``streamable_http.py``). ``create_server``
+    must keep the ``mcp`` logger at WARNING or above so that never happens,
+    regardless of what a future SDK bump does to its own logging defaults."""
+
+    def test_create_server_keeps_mcp_logger_at_warning_or_above(self) -> None:
+        create_server()
+
+        self.assertGreaterEqual(logging.getLogger("mcp").getEffectiveLevel(), logging.WARNING)
 
 
 if __name__ == "__main__":

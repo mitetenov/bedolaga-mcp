@@ -19,6 +19,8 @@ factory owns identity and tool registration only.
 
 from __future__ import annotations
 
+import logging
+
 from mcp.server import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 
@@ -66,12 +68,29 @@ def create_server() -> MCPServer:
     the same server object serves both stdio and HTTP without transport
     concerns leaking into either.
     """
+    # ``MCPServer.__init__`` defaults ``log_level`` to "INFO" and calls
+    # ``configure_logging(...)`` internally, which runs
+    # ``logging.basicConfig(level="INFO", ...)`` — a global root-logger
+    # mutation. At INFO the SDK's own transport code logs full, unredacted
+    # session UUIDs on every session create/terminate
+    # (``streamable_http_manager.py``, ``streamable_http.py``), which the
+    # migration plan's "never log session IDs" constraint forbids. Passing
+    # ``log_level="WARNING"`` here keeps ``configure_logging`` from lowering
+    # the root logger below WARNING in the first place; the explicit
+    # ``getLogger("mcp").setLevel(...)`` below is a second, independent belt:
+    # it sets an explicit level on the ancestor logger that
+    # ``getEffectiveLevel()`` finds first, so this stays correct even if a
+    # future SDK version changes what ``configure_logging`` does to the root
+    # logger (e.g. skips ``basicConfig`` because a handler is already
+    # attached).
     server = MCPServer(
         name=SERVER_NAME,
         version=__version__,
+        log_level="WARNING",
     )
+    logging.getLogger("mcp").setLevel(logging.WARNING)
     register_tools(server)
     return server
 
 
-__all__ = ["ALLOWED_HTTP_HOSTS", "SERVER_NAME", "create_server"]
+__all__ = ["ALLOWED_HTTP_HOSTS", "SERVER_NAME", "_transport_security", "create_server"]
