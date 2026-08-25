@@ -3,8 +3,12 @@
 Serves the MCP endpoint on the root path ``/`` so supportBot configures the
 same base URL it already uses for mcp-remnawave. Per-session lifecycle
 (initialize on ``POST /``, routing by ``Mcp-Session-Id``, per-session
-termination via ``DELETE /``) is handled by the MCP SDK's session manager that
-FastMCP wires into the returned Starlette app.
+termination via ``DELETE /``) is handled by the MCP SDK v2 session manager
+that ``MCPServer.streamable_http_app()`` wires into the returned Starlette
+app. The same endpoint also transparently serves the modern (2026-07-28)
+protocol era for clients that negotiate it — the SDK's session manager routes
+each request by its declared protocol version, so ``/`` stays a single
+dual-era endpoint.
 
 ``GET /health`` is a liveness probe that only reports process status and the
 server version; it performs no upstream Bedolaga request and never reveals the
@@ -13,8 +17,8 @@ base URL or the API key.
 Graceful shutdown: on SIGTERM/SIGINT uvicorn stops accepting connections, runs
 the Starlette lifespan (which exits the MCP session manager and closes all
 active sessions) and then this module closes the shared upstream Bedolaga client.
-All log output is produced by uvicorn/FastMCP and contains no API key, no base
-URL and no tool results.
+All log output is produced by uvicorn/the MCP SDK and contains no API key, no
+base URL and no tool results.
 """
 
 from __future__ import annotations
@@ -29,7 +33,7 @@ from starlette.responses import JSONResponse
 
 from . import __version__
 from .config import load_config
-from .server import SERVER_NAME, create_server
+from .server import SERVER_NAME, _transport_security, create_server
 from .tools import close_client
 
 
@@ -53,8 +57,14 @@ def _bind_environ(environ: Mapping[str, str] | None = None) -> dict[str, str]:
     return env
 
 
-def create_app() -> Starlette:
-    """Build the Starlette app for the sessionful Streamable HTTP transport."""
+def create_app(transport_host: str = "0.0.0.0") -> Starlette:
+    """Build the Starlette app for the sessionful Streamable HTTP transport.
+
+    ``transport_host`` is the same bind host Uvicorn will listen on
+    (``config.mcp_http_host`` from :func:`run`); passing it into
+    ``streamable_http_app`` keeps SDK-side validation and the actual Uvicorn
+    bind configuration from diverging.
+    """
     server = create_server()
 
     @server.custom_route("/health", methods=["GET"])
@@ -67,7 +77,13 @@ def create_app() -> Starlette:
             }
         )
 
-    return server.streamable_http_app()
+    return server.streamable_http_app(
+        host=transport_host,
+        streamable_http_path="/",
+        json_response=True,
+        stateless_http=False,
+        transport_security=_transport_security(),
+    )
 
 
 class _BedolagaHTTPServer(uvicorn.Server):
@@ -83,7 +99,7 @@ class _BedolagaHTTPServer(uvicorn.Server):
 def run() -> None:
     """Run the HTTP transport until SIGTERM/SIGINT, then shut down gracefully."""
     config = load_config(environ=_bind_environ())
-    app = create_app()
+    app = create_app(config.mcp_http_host)
     server = _BedolagaHTTPServer(
         uvicorn.Config(
             app,

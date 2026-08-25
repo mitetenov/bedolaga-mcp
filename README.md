@@ -216,17 +216,24 @@ MCP-сервер для получения пользовательских фа
 
 | Транспорт | Launcher | Порт | Протокол |
 |---|---|---|---|
-| **Streamable HTTP** (основной) | `http_server.py` | 3100 по умолчанию | Sessionful MCP на `/`, `GET /health`, `DELETE /` |
+| **Streamable HTTP** (основной) | `http_server.py` | 3100 по умолчанию | Dual-era MCP на `/` (см. ниже), `GET /health`, `DELETE /` (только legacy-сессии) |
 | Stdio | `bedolaga_server.py` | — | MCP stdio handshake (тот же factory) |
 
-Sessionful Streamable HTTP — современный транспорт MCP, тот же, что использует mcp-remnawave. `GET /health` отдаёт liveness процесса и версию сервера, не раскрывая конфигурацию и секреты. `DELETE /` завершает только указанную сессию (`Mcp-Session-Id`); каждая сессия независима.
+Эндпоинт `/` — единственный, но обслуживает **две эры протокола** одновременно; SDK v2 сам определяет, к какой эре относится каждый запрос, по заголовку `MCP-Protocol-Version`:
+
+- **Современный протокол `2026-07-28`** — stateless/sessionless. Каждый POST на `/` самодостаточен: сервер никогда не выдаёт `Mcp-Session-Id` и не хранит состояние между запросами. Официальные клиенты MCP SDK v2 (см. «Официальный клиент SDK v2» ниже) используют этот режим автоматически.
+- **Legacy-клиенты с initialize-handshake** (протоколы вплоть до `2025-11-25`, включая `2024-11-05`) получают заголовок `Mcp-Session-Id` в ответ на `initialize` и обязаны передавать его во всех последующих запросах. `DELETE /` с этим заголовком завершает именно эту сессию; на другие сессии и на современных клиентов это не влияет.
+
+`GET /health` отдаёт liveness процесса и версию сервера, не раскрывая конфигурацию и секреты.
 
 ## Версионная совместимость
 
 | Компонент | Версия |
 |---|---|
 | Bedolaga Bot API (upstream) | commit `49b05d5`, приложение `4.1.0` |
-| bedolaga-mcp | `1.1.0` |
+| bedolaga-mcp | `1.2.0` |
+| Python MCP SDK (`mcp`) | `2.0.0` |
+| Поддерживаемые протоколы MCP | `2026-07-28` (современный, stateless) + legacy initialize-handshake вплоть до `2025-11-25` |
 | supportBot | `2.0.1` |
 | mcp-remnawave | `v3.2.1` |
 
@@ -333,13 +340,15 @@ mcp_servers:
 }
 ```
 
-#### Проверка через curl
+#### Проверка через curl (legacy compatibility check)
+
+Сырой JSON-RPC через curl использует **legacy initialize-handshake** (протокол `2024-11-05`) — это ручная проверка обратной совместимости, а не то, как ходят современные клиенты. Современные клиенты MCP SDK v2 согласовывают протокол `2026-07-28` автоматически и `Mcp-Session-Id` не получают (см. «Официальный клиент SDK v2 (современный протокол)» ниже).
 
 ```bash
 # Liveness
 curl -s http://localhost:3100/health
 
-# Инициализация (получить session ID)
+# Legacy initialize handshake (получить session ID; работает для протоколов вплоть до 2025-11-25)
 curl -s -X POST http://localhost:3100/ \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
@@ -371,10 +380,38 @@ curl -s -X POST http://localhost:3100/ \
   -H "Mcp-Session-Id: <SESSION_ID>" \
   -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"bedolaga_referrals_get","arguments":{"telegram_id":123456789}},"id":5}'
 
-# Завершение сессии
+# Завершение legacy-сессии (для современного протокола 2026-07-28 не требуется и не применяется)
 curl -s -X DELETE http://localhost:3100/ \
   -H "Mcp-Session-Id: <SESSION_ID>"
 ```
+
+#### Официальный клиент SDK v2 (современный протокол)
+
+Официальный клиент из Python MCP SDK v2 (`mcp==2.0.0`) сам согласовывает протокол — `2026-07-28`, если сервер его поддерживает, иначе legacy-handshake — без ручного построения `_meta` или заголовков:
+
+```python
+import asyncio
+
+from mcp.client.client import Client
+
+
+async def main() -> None:
+    async with Client("http://localhost:3100/", mode="auto") as client:
+        print("negotiated protocol:", client.protocol_version)  # "2026-07-28" against this server
+
+        tools = await client.list_tools()
+        print([tool.name for tool in tools.tools])
+
+        result = await client.call_tool(
+            "bedolaga_user_get", {"telegram_id": 123456789}
+        )
+        print(result.content)
+
+
+asyncio.run(main())
+```
+
+`mode="auto"` — это то же самое согласование, которое использует supportBot: клиент сам решает, современный сервер перед ним или legacy, и не требует от вызывающего кода знать протокольную эру заранее.
 
 ### Stdio транспорт
 
@@ -429,7 +466,10 @@ mcp_servers:
 
 ## Управление сессиями
 
-Streamable HTTP транспорт использует stateful-сессии. После инициализации сервер возвращает заголовок `mcp-session-id`, который клиент должен передавать во всех последующих запросах. `DELETE /` завершает только указанную сессию; один клиент не может завершить или переиспользовать чужую сессию.
+Streamable HTTP транспорт — dual-era, и сессии применимы только к одной из двух эр:
+
+- **Legacy initialize-handshake** (протоколы вплоть до `2025-11-25`): после `initialize` сервер возвращает заголовок `Mcp-Session-Id`, который клиент должен передавать во всех последующих запросах. `DELETE /` с этим заголовком завершает только указанную сессию; один клиент не может завершить или переиспользовать чужую сессию.
+- **Современный протокол `2026-07-28`**: stateless/sessionless — сервер никогда не выдаёт `Mcp-Session-Id`, и `DELETE /` для таких клиентов не нужен и не применяется.
 
 ## Переменные окружения
 
@@ -463,3 +503,5 @@ Bedolaga Web API: `X-API-Key` в заголовке. Используемые м
 ## Откат (rollback)
 
 Выключение `BEDOLAGA_MCP_ENABLED=false` в supportBot возвращает его в Remnawave-only режим: Bedolaga MCP не подключается, его инструменты исчезают из allowlist, а вебхук/poller-обработка тикетов (`BEDOLAGA_ENABLED`) остаётся независимой. Откат не трогает пользовательскую базу и финансовые данные — Bedolaga MCP read-only и не хранит состояние.
+
+Откат образа `bedolaga-mcp` до тега `1.1.0` (последний релиз до миграции на MCP SDK v2, только legacy-эра Streamable HTTP) тоже безопасен: клиент supportBot на MCP SDK v2 автоматически переходит (auto-fallback) на legacy initialize-handshake, если сервер не отвечает на современный протокол `2026-07-28`, поэтому инструменты Bedolaga MCP остаются доступны без дополнительной настройки.
