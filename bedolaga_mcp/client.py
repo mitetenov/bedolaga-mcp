@@ -58,12 +58,14 @@ class BedolagaClient:
     async def get_user_by_telegram_id(self, telegram_id: int) -> dict[str, Any]:
         """GET /users/by-telegram-id/{telegram_id} → UserResponse."""
         self._require_id("telegram_id", telegram_id)
-        return await self._get(f"/users/by-telegram-id/{telegram_id}")
+        return await self._get(
+            f"/users/by-telegram-id/{telegram_id}", is_user_lookup=True
+        )
 
     async def get_user_by_id(self, user_id: int) -> dict[str, Any]:
         """GET /users/{user_id} → UserResponse (internal Bedolaga user id)."""
         self._require_id("user_id", user_id)
-        return await self._get(f"/users/{user_id}")
+        return await self._get(f"/users/{user_id}", is_user_lookup=True)
 
     async def list_transactions(
         self,
@@ -138,16 +140,28 @@ class BedolagaClient:
         )
 
     async def _get(
-        self, path: str, params: Mapping[str, Any] | None = None
+        self,
+        path: str,
+        params: Mapping[str, Any] | None = None,
+        *,
+        is_user_lookup: bool = False,
     ) -> dict[str, Any]:
         """Backward-compatible alias for :meth:`_get_object`."""
-        return await self._get_object(path, params=params)
+        return await self._get_object(
+            path, params=params, is_user_lookup=is_user_lookup
+        )
 
     async def _get_object(
-        self, path: str, params: Mapping[str, Any] | None = None
+        self,
+        path: str,
+        params: Mapping[str, Any] | None = None,
+        *,
+        is_user_lookup: bool = False,
     ) -> dict[str, Any]:
         """Send one read-only GET and enforce that the JSON payload is an object."""
-        payload = await self._request_json(path, params=params)
+        payload = await self._request_json(
+            path, params=params, is_user_lookup=is_user_lookup
+        )
         if not isinstance(payload, dict):
             raise InvalidUpstreamResponseError(
                 "Bedolaga API returned an unexpected response shape"
@@ -155,10 +169,16 @@ class BedolagaClient:
         return payload
 
     async def _get_list(
-        self, path: str, params: Mapping[str, Any] | None = None
+        self,
+        path: str,
+        params: Mapping[str, Any] | None = None,
+        *,
+        is_user_lookup: bool = False,
     ) -> list[dict[str, Any]]:
         """Send one read-only GET and enforce that the JSON payload is a list of objects."""
-        payload = await self._request_json(path, params=params)
+        payload = await self._request_json(
+            path, params=params, is_user_lookup=is_user_lookup
+        )
         if not isinstance(payload, list):
             raise InvalidUpstreamResponseError(
                 "Bedolaga API returned an unexpected response shape"
@@ -171,7 +191,11 @@ class BedolagaClient:
         return payload
 
     async def _request_json(
-        self, path: str, params: Mapping[str, Any] | None = None
+        self,
+        path: str,
+        params: Mapping[str, Any] | None = None,
+        *,
+        is_user_lookup: bool = False,
     ) -> Any:
         """Send one read-only GET and map every failure onto domain errors.
 
@@ -195,7 +219,9 @@ class BedolagaClient:
             ) from exc
 
         if response.status_code == 404:
-            raise UserNotFoundError("User not found")
+            if is_user_lookup:
+                raise UserNotFoundError("User not found")
+            raise UpstreamUnavailableError("Requested Bedolaga resource is unavailable")
         if response.status_code in (401, 403):
             raise UnauthorizedError("Invalid or missing Bedolaga API credentials")
         if response.status_code == 429:

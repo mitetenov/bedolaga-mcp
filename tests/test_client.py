@@ -6,7 +6,15 @@ import httpx
 
 from bedolaga_mcp.client import BedolagaClient
 from bedolaga_mcp.config import Config
-from bedolaga_mcp.errors import UpstreamTimeoutError, UpstreamUnavailableError
+from bedolaga_mcp.errors import (
+    InvalidInputError,
+    InvalidUpstreamResponseError,
+    RateLimitedError,
+    UnauthorizedError,
+    UpstreamTimeoutError,
+    UpstreamUnavailableError,
+    UserNotFoundError,
+)
 
 
 def _config() -> Config:
@@ -156,6 +164,138 @@ class ClientNewRoutesTests(unittest.IsolatedAsyncioTestCase):
             # negative offset
             with self.assertRaises(InvalidInputError):
                 await client.list_promocodes(offset=-1)
+        finally:
+            await client.aclose()
+
+
+class ClientStatus404SemanticsTests(unittest.IsolatedAsyncioTestCase):
+    async def _client_with_handler(self, handler: Any) -> BedolagaClient:
+        client = BedolagaClient(_config())
+        await client._client.aclose()
+        client._client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        return client
+
+    async def test_user_lookup_by_telegram_id_404_raises_user_not_found(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(404, json={"detail": "user not found"})
+
+        client = await self._client_with_handler(handler)
+        try:
+            with self.assertRaises(UserNotFoundError) as ctx:
+                await client.get_user_by_telegram_id(777)
+            self.assertEqual(ctx.exception.code, "user_not_found")
+            self.assertFalse(ctx.exception.retryable)
+            self.assertEqual(ctx.exception.message, "User not found")
+        finally:
+            await client.aclose()
+
+    async def test_user_lookup_by_id_404_raises_user_not_found(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(404, json={"detail": "user not found"})
+
+        client = await self._client_with_handler(handler)
+        try:
+            with self.assertRaises(UserNotFoundError) as ctx:
+                await client.get_user_by_id(42)
+            self.assertEqual(ctx.exception.code, "user_not_found")
+            self.assertFalse(ctx.exception.retryable)
+            self.assertEqual(ctx.exception.message, "User not found")
+        finally:
+            await client.aclose()
+
+    async def test_list_transactions_404_raises_upstream_unavailable(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(404, json={"detail": "transactions not found", "secret": "leak"})
+
+        client = await self._client_with_handler(handler)
+        try:
+            with self.assertRaises(UpstreamUnavailableError) as ctx:
+                await client.list_transactions(42)
+            self.assertEqual(ctx.exception.code, "upstream_unavailable")
+            self.assertTrue(ctx.exception.retryable)
+            self.assertEqual(ctx.exception.message, "Requested Bedolaga resource is unavailable")
+            self.assertNotIn("leak", ctx.exception.message)
+            self.assertNotIn("secret", ctx.exception.message)
+        finally:
+            await client.aclose()
+
+    async def test_get_referrer_detail_404_raises_upstream_unavailable(self) -> None:
+        client = await self._client_with_handler(lambda req: httpx.Response(404, json={}))
+        try:
+            with self.assertRaises(UpstreamUnavailableError) as ctx:
+                await client.get_referrer_detail(42)
+            self.assertEqual(ctx.exception.code, "upstream_unavailable")
+            self.assertTrue(ctx.exception.retryable)
+            self.assertEqual(ctx.exception.message, "Requested Bedolaga resource is unavailable")
+        finally:
+            await client.aclose()
+
+    async def test_list_subscriptions_404_raises_upstream_unavailable(self) -> None:
+        client = await self._client_with_handler(lambda req: httpx.Response(404, json={}))
+        try:
+            with self.assertRaises(UpstreamUnavailableError) as ctx:
+                await client.list_subscriptions(42)
+            self.assertEqual(ctx.exception.code, "upstream_unavailable")
+            self.assertTrue(ctx.exception.retryable)
+            self.assertEqual(ctx.exception.message, "Requested Bedolaga resource is unavailable")
+        finally:
+            await client.aclose()
+
+    async def test_list_tickets_404_raises_upstream_unavailable(self) -> None:
+        client = await self._client_with_handler(lambda req: httpx.Response(404, json={}))
+        try:
+            with self.assertRaises(UpstreamUnavailableError) as ctx:
+                await client.list_tickets(42)
+            self.assertEqual(ctx.exception.code, "upstream_unavailable")
+            self.assertTrue(ctx.exception.retryable)
+            self.assertEqual(ctx.exception.message, "Requested Bedolaga resource is unavailable")
+        finally:
+            await client.aclose()
+
+    async def test_list_promocodes_404_raises_upstream_unavailable(self) -> None:
+        client = await self._client_with_handler(lambda req: httpx.Response(404, json={}))
+        try:
+            with self.assertRaises(UpstreamUnavailableError) as ctx:
+                await client.list_promocodes()
+            self.assertEqual(ctx.exception.code, "upstream_unavailable")
+            self.assertTrue(ctx.exception.retryable)
+            self.assertEqual(ctx.exception.message, "Requested Bedolaga resource is unavailable")
+        finally:
+            await client.aclose()
+
+    async def test_internal_request_helpers_default_to_upstream_unavailable_on_404(self) -> None:
+        client = await self._client_with_handler(lambda req: httpx.Response(404, json={}))
+        try:
+            with self.assertRaises(UpstreamUnavailableError):
+                await client._request_json("/arbitrary/path")
+            with self.assertRaises(UpstreamUnavailableError):
+                await client._get("/arbitrary/path")
+            with self.assertRaises(UpstreamUnavailableError):
+                await client._get_object("/arbitrary/path")
+            with self.assertRaises(UpstreamUnavailableError):
+                await client._get_list("/arbitrary/path")
+
+            # When explicitly marked as user lookup:
+            with self.assertRaises(UserNotFoundError):
+                await client._request_json("/arbitrary/path", is_user_lookup=True)
+            with self.assertRaises(UserNotFoundError):
+                await client._get("/arbitrary/path", is_user_lookup=True)
+            with self.assertRaises(UserNotFoundError):
+                await client._get_object("/arbitrary/path", is_user_lookup=True)
+        finally:
+            await client.aclose()
+
+    async def test_successful_empty_collections_preserved(self) -> None:
+        client = await self._client_with_handler(
+            lambda req: httpx.Response(200, json=[] if "subscriptions" in req.url.path or "tickets" in req.url.path else {"items": [], "total": 0})
+        )
+        try:
+            subs = await client.list_subscriptions(42)
+            self.assertEqual(subs, [])
+            tickets = await client.list_tickets(42)
+            self.assertEqual(tickets, [])
+            promos = await client.list_promocodes()
+            self.assertEqual(promos, {"items": [], "total": 0})
         finally:
             await client.aclose()
 
