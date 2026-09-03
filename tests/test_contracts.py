@@ -3,8 +3,11 @@ from __future__ import annotations
 import unittest
 
 from bedolaga_mcp.contracts import (
+    ERROR_CODES,
+    ERROR_RETRYABLE,
     bot_subscription_records,
     latest_completed_deposit,
+    make_error_envelope,
     purchased_after_latest_deposit,
     transaction_time_key,
 )
@@ -123,6 +126,46 @@ class AccountingStatusTests(unittest.TestCase):
         self.assertEqual(accounting_status("True"), "unknown")
         self.assertEqual(accounting_status(0), "unknown")
         self.assertEqual(accounting_status(1), "unknown")
+
+
+class SpecErrorCodesContractTests(unittest.TestCase):
+    def test_exact_ten_spec_error_codes(self) -> None:
+        expected = {
+            "invalid_input",
+            "not_configured",
+            "identity_unavailable",
+            "user_not_found",
+            "unauthorized",
+            "rate_limited",
+            "upstream_timeout",
+            "upstream_unavailable",
+            "invalid_upstream_response",
+            "internal_error",
+        }
+        self.assertEqual(ERROR_CODES, expected)
+        self.assertEqual(len(ERROR_CODES), 10)
+
+    def test_retryable_flags(self) -> None:
+        for code in ERROR_CODES:
+            if code in ("rate_limited", "upstream_timeout", "upstream_unavailable"):
+                self.assertTrue(ERROR_RETRYABLE[code], f"{code} should be retryable")
+            else:
+                self.assertFalse(ERROR_RETRYABLE[code], f"{code} should not be retryable")
+
+    def test_make_error_envelope_enforces_retryable_flag(self) -> None:
+        env_unavail = make_error_envelope("bedolaga_billing_get", "upstream_unavailable", "msg")
+        self.assertTrue(env_unavail["error"]["retryable"])
+        self.assertEqual(env_unavail["error"]["code"], "upstream_unavailable")
+
+        env_not_found = make_error_envelope("bedolaga_billing_get", "user_not_found", "msg")
+        self.assertFalse(env_not_found["error"]["retryable"])
+        self.assertEqual(env_not_found["error"]["code"], "user_not_found")
+
+        with self.assertRaises(ValueError):
+            make_error_envelope("tool", "user_not_found", "msg", retryable=True)
+
+        with self.assertRaises(ValueError):
+            make_error_envelope("tool", "upstream_unavailable", "msg", retryable=False)
 
 
 if __name__ == "__main__":

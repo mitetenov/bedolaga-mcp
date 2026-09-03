@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 from typing import Any
 
+from bedolaga_mcp.errors import UpstreamUnavailableError
 from bedolaga_mcp.tools.billing import bedolaga_billing_get
 
 
@@ -70,6 +71,17 @@ class BillingToolTests(unittest.IsolatedAsyncioTestCase):
                 },
             ],
         )
+
+    async def test_propagates_upstream_unavailable_from_transactions(self) -> None:
+        class FailingTransactionsClient(FakeClient):
+            async def list_transactions(self, user_id: int, **kwargs: Any) -> dict[str, Any]:
+                raise UpstreamUnavailableError("Requested Bedolaga resource is unavailable")
+
+        client = FailingTransactionsClient()
+        with self.assertRaises(UpstreamUnavailableError) as ctx:
+            await bedolaga_billing_get(client, telegram_id=777)
+        self.assertEqual(ctx.exception.code, "upstream_unavailable")
+        self.assertTrue(ctx.exception.retryable)
 
 
 if __name__ == "__main__":

@@ -51,7 +51,7 @@ class PromocodeToolTests(unittest.IsolatedAsyncioTestCase):
                             "traffic_gb": 0,
                             "uses_left": 12,
                             "valid_from": "2026-08-01T00:00:00Z",
-                            "valid_until": "2026-09-01T00:00:00Z",
+                            "valid_until": "2030-01-01T00:00:00Z",
                             "created_by": "admin@example.com",
                         }
                     ],
