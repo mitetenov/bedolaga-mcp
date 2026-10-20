@@ -27,6 +27,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          platforms: linux/amd64
           push: false
           load: true
           tags: bedolaga-mcp:test
@@ -57,6 +58,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          platforms: linux/amd64
           push: true
           cache-from: type=gha,scope=bedolaga-mcp
           cache-to: type=gha,scope=bedolaga-mcp,mode=max
