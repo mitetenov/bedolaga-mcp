@@ -191,7 +191,7 @@ MCP-сервер для получения пользовательских фа
 - успех: `ok: true`, `source: "bedolaga-mcp"`, `tool`, `data`, `meta`;
 - ошибка: `ok: false`, `source`, `tool`, `error.code`, безопасный `error.message`, `error.retryable`.
 
-Сырое тело ответа Bedolaga API и исключения Python модели не возвращаются. Инструменты не возвращают email, ссылку подписки, crypto link, ключи, внешние платёжные ID, receipt-идентификаторы, Remnawave-идентификаторы и персональные данные рефералов.
+Сырое тело ответа Bedolaga API и внутренние ошибки модели не возвращаются. Инструменты не возвращают email, ссылку подписки, crypto link, ключи, внешние платёжные ID, receipt-идентификаторы, Remnawave-идентификаторы и персональные данные рефералов.
 
 ### Error codes
 
@@ -216,8 +216,8 @@ MCP-сервер для получения пользовательских фа
 
 | Транспорт | Launcher | Порт | Протокол |
 |---|---|---|---|
-| **Streamable HTTP** (основной) | `http_server.py` | 3100 по умолчанию | Dual-era MCP на `/` (см. ниже), `GET /health`, `DELETE /` (только legacy-сессии) |
-| Stdio | `bedolaga_server.py` | — | MCP stdio handshake (тот же factory) |
+| **Streamable HTTP** (основной) | `bedolaga-mcp http` | 3100 по умолчанию | Dual-era MCP на `/` (см. ниже), `GET /health`, `DELETE /` (только legacy-сессии) |
+| Stdio | `bedolaga-mcp stdio` | — | MCP stdio handshake (тот же factory) |
 
 Эндпоинт `/` — единственный, но обслуживает **две эры протокола** одновременно; SDK v2 сам определяет, к какой эре относится каждый запрос, по заголовку `MCP-Protocol-Version`:
 
@@ -232,7 +232,7 @@ MCP-сервер для получения пользовательских фа
 |---|---|
 | Bedolaga Bot API (upstream) | commit `49b05d5`, приложение `4.1.0` |
 | bedolaga-mcp | `1.2.0` |
-| Python MCP SDK (`mcp`) | `2.0.0` |
+| Official Go MCP SDK | `v1.7.0` |
 | Поддерживаемые протоколы MCP | `2026-07-28` (современный, stateless) + legacy initialize-handshake вплоть до `2025-11-25` |
 | supportBot | `2.0.1` |
 | mcp-remnawave | `v3.2.1` |
@@ -242,7 +242,7 @@ MCP-сервер для получения пользовательских фа
 
 ## Требования
 
-- Python 3.11+
+- Go 1.27+ для сборки (готовый контейнер не требует Go или Python)
 - Docker (опционально)
 - Развёрнутый Bedolaga Bot с Web API
 - API-ключ от Bedolaga (выдаётся в админ-панели бота)
@@ -268,13 +268,13 @@ cp .env.example .env
 **Streamable HTTP (рекомендуется):**
 
 ```bash
-# Установить зависимости
-pip install -r requirements.txt
+# Собрать исполняемый файл
+go build -o bedolaga-mcp ./cmd/bedolaga-mcp
 
 # Запустить HTTP-сервер
 BEDOLAGA_API_URL=https://your-bot.example.com \
 BEDOLAGA_API_KEY=your-key \
-python3 http_server.py
+./bedolaga-mcp http
 ```
 
 Сервер будет слушать на `http://0.0.0.0:3100`, MCP endpoint — корень `/`.
@@ -284,7 +284,7 @@ python3 http_server.py
 ```bash
 BEDOLAGA_API_URL=https://your-bot.example.com \
 BEDOLAGA_API_KEY=your-key \
-python3 bedolaga_server.py
+MCP_HTTP_HOST=127.0.0.1 MCP_HTTP_PORT=3100 ./bedolaga-mcp stdio
 ```
 
 **Через Docker:**
@@ -312,6 +312,8 @@ mcp_servers:
     env:
       BEDOLAGA_API_URL: "https://your-bot.example.com"
       BEDOLAGA_API_KEY: "your-api-key"
+      MCP_HTTP_HOST: "127.0.0.1"
+      MCP_HTTP_PORT: "3100"
 ```
 
 #### Claude Desktop
@@ -421,11 +423,13 @@ asyncio.run(main())
 # ~/.hermes/config.yaml
 mcp_servers:
   bedolaga:
-    command: "python3"
-    args: ["/path/to/bedolaga-mcp/bedolaga_server.py"]
+    command: "/path/to/bedolaga-mcp/bedolaga-mcp"
+    args: ["stdio"]
     env:
       BEDOLAGA_API_URL: "https://your-bot.example.com"
       BEDOLAGA_API_KEY: "your-api-key"
+      MCP_HTTP_HOST: "127.0.0.1"
+      MCP_HTTP_PORT: "3100"
 ```
 
 #### Claude Desktop
@@ -434,11 +438,13 @@ mcp_servers:
 {
   "mcpServers": {
     "bedolaga": {
-      "command": "python3",
-      "args": ["/path/to/bedolaga-mcp/bedolaga_server.py"],
+      "command": "/path/to/bedolaga-mcp/bedolaga-mcp",
+      "args": ["stdio"],
       "env": {
         "BEDOLAGA_API_URL": "https://your-bot.example.com",
-        "BEDOLAGA_API_KEY": "your-api-key"
+        "BEDOLAGA_API_KEY": "your-api-key",
+        "MCP_HTTP_HOST": "127.0.0.1",
+        "MCP_HTTP_PORT": "3100"
       }
     }
   }
@@ -453,11 +459,13 @@ mcp_servers:
 {
   "mcpServers": {
     "bedolaga": {
-      "command": "python3",
-      "args": ["/path/to/bedolaga-mcp/bedolaga_server.py"],
+      "command": "/path/to/bedolaga-mcp/bedolaga-mcp",
+      "args": ["stdio"],
       "env": {
         "BEDOLAGA_API_URL": "https://your-bot.example.com",
-        "BEDOLAGA_API_KEY": "your-api-key"
+        "BEDOLAGA_API_KEY": "your-api-key",
+        "MCP_HTTP_HOST": "127.0.0.1",
+        "MCP_HTTP_PORT": "3100"
       }
     }
   }
@@ -505,3 +513,26 @@ Bedolaga Web API: `X-API-Key` в заголовке. Используемые м
 Выключение `BEDOLAGA_MCP_ENABLED=false` в supportBot возвращает его в Remnawave-only режим: Bedolaga MCP не подключается, его инструменты исчезают из allowlist, а вебхук/poller-обработка тикетов (`BEDOLAGA_ENABLED`) остаётся независимой. Откат не трогает пользовательскую базу и финансовые данные — Bedolaga MCP read-only и не хранит состояние.
 
 Откат образа `bedolaga-mcp` до тега `1.1.0` (последний релиз до миграции на MCP SDK v2, только legacy-эра Streamable HTTP) тоже безопасен: клиент supportBot на MCP SDK v2 автоматически переходит (auto-fallback) на legacy initialize-handshake, если сервер не отвечает на современный протокол `2026-07-28`, поэтому инструменты Bedolaga MCP остаются доступны без дополнительной настройки.
+
+## Go build and verification
+
+Production is a statically linked Go executable at `/app/bedolaga-mcp` in a `scratch` image. The runtime contains the executable, HTTPS CA bundle, account records for the nonroot `appuser` (UID/GID 1000), its home directory and writable `/tmp`; it has no shell, package manager, shared libraries, Python or Go toolchain. Use `bedolaga-mcp http` (default) or `bedolaga-mcp stdio`. `bedolaga-mcp --version` prints the application version. `bedolaga-mcp healthcheck` checks the local HTTP health endpoint and exits nonzero on failure. The Compose image name, port 3100, environment variables, internal-only networking and restart policy are preserved.
+
+```bash
+go test -race -cover ./...
+go vet ./...
+go build -o bedolaga-mcp ./cmd/bedolaga-mcp
+docker build -t bedolaga-mcp:local .
+```
+
+Tests include 104 normalization cases captured from the committed Python suite, real local upstream HTTP servers, both protocol eras, session termination, host/origin checks, and an executable subprocess handshake/tool call/EOF shutdown. No production API is contacted. The transport adapter preserves Python SDK response metadata and legacy HTTP status/error behavior around the official Go SDK.
+
+## Docker build cache
+
+The build context includes only production Go files, the embedded tool registry, `go.mod` and `go.sum`. Tests, golden fixtures, documentation, local files and secrets stay outside the context. Unit tests still run separately in CI.
+
+Dependency manifests are copied before the production sources. `go mod download` writes dependencies into an ordinary cached layer, so a source-only edit reuses that layer. Compilation runs without network access and uses a persistent BuildKit compiler cache on the current builder. Changing only tests or documentation does not rebuild the executable.
+
+Both CI image jobs import and export GitHub Actions layer cache with `mode=max`. This preserves intermediate dependency layers on fresh runners. BuildKit cache-mount contents are local to a builder and are not exported by that backend; correctness and dependency reuse do not rely on them. Ordinary `docker build -t bedolaga-mcp:local .` still works with Docker's default BuildKit builder.
+
+The application parses UTC or explicit numeric-offset timestamps and does not load IANA time zones. The previous runtime did not install zoneinfo; the minimal runtime retains that behavior and does not add a time-zone database. The existing HTTP/stdio commands and Compose healthcheck use the executable directly.

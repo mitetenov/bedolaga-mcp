@@ -1,4 +1,12 @@
-__pycache__/
-.venv/
-*.pyc
+/bedolaga-mcp
+/bin/
+/coverage.out
+.env
+.env.*
+!.env.example
 .worktrees/
+
+# Local artifacts retained from the previous checkout.
+.venv/
+__pycache__/
+*.pyc

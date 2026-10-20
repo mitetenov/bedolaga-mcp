@@ -1,0 +1,2395 @@
+[
+  {
+    "name": "money_pair",
+    "args": [
+      10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 10000,
+      "rubles": 100.0
+    }
+  },
+  {
+    "name": "balance_money",
+    "args": [
+      10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "balance_kopeks": 10000,
+      "balance_rubles": 100.0
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      -10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": -10000,
+      "rubles": -100.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      -10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 10000,
+      "amount_rubles": 100.0
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 10000,
+      "rubles": 100.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 10000,
+      "amount_rubles": 100.0
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 10000,
+      "rubles": 100.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 10000,
+      "amount_rubles": 100.0
+    }
+  },
+  {
+    "name": "latest_completed_deposit",
+    "args": [
+      [
+        {
+          "id": 1,
+          "user_id": 42,
+          "type": "deposit",
+          "is_completed": true,
+          "amount_kopeks": 10000,
+          "created_at": "2026-08-01T07:00:00Z"
+        },
+        {
+          "id": 2,
+          "user_id": 42,
+          "type": "subscription_payment",
+          "is_completed": true,
+          "amount_kopeks": -10000,
+          "created_at": "2026-08-01T08:00:00Z"
+        }
+      ]
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 10000,
+      "amount_rubles": 100.0,
+      "category": "deposit",
+      "created_at": "2026-08-01T07:00:00Z",
+      "completed_at": null
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      -10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": -10000,
+      "rubles": -100.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      -10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 10000,
+      "amount_rubles": 100.0
+    }
+  },
+  {
+    "name": "latest_completed_subscription_purchase",
+    "args": [
+      [
+        {
+          "id": 1,
+          "user_id": 42,
+          "type": "deposit",
+          "is_completed": true,
+          "amount_kopeks": 10000,
+          "created_at": "2026-08-01T07:00:00Z"
+        },
+        {
+          "id": 2,
+          "user_id": 42,
+          "type": "subscription_payment",
+          "is_completed": true,
+          "amount_kopeks": -10000,
+          "created_at": "2026-08-01T08:00:00Z"
+        }
+      ]
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 10000,
+      "amount_rubles": 100.0,
+      "category": "subscription_purchase",
+      "created_at": "2026-08-01T08:00:00Z",
+      "completed_at": null
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 10000,
+      "rubles": 100.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 10000,
+      "amount_rubles": 100.0
+    }
+  },
+  {
+    "name": "latest_completed_deposit",
+    "args": [
+      [
+        {
+          "id": 1,
+          "user_id": 42,
+          "type": "deposit",
+          "is_completed": true,
+          "amount_kopeks": 10000,
+          "created_at": "2026-08-01T07:00:00Z"
+        },
+        {
+          "id": 2,
+          "user_id": 42,
+          "type": "subscription_payment",
+          "is_completed": true,
+          "amount_kopeks": -10000,
+          "created_at": "2026-08-01T08:00:00Z"
+        }
+      ]
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 10000,
+      "amount_rubles": 100.0,
+      "category": "deposit",
+      "created_at": "2026-08-01T07:00:00Z",
+      "completed_at": null
+    }
+  },
+  {
+    "name": "purchased_after_latest_deposit",
+    "args": [
+      [
+        {
+          "id": 1,
+          "user_id": 42,
+          "type": "deposit",
+          "is_completed": true,
+          "amount_kopeks": 10000,
+          "created_at": "2026-08-01T07:00:00Z"
+        },
+        {
+          "id": 2,
+          "user_id": 42,
+          "type": "subscription_payment",
+          "is_completed": true,
+          "amount_kopeks": -10000,
+          "created_at": "2026-08-01T08:00:00Z"
+        }
+      ]
+    ],
+    "kwargs": {},
+    "expected": true
+  },
+  {
+    "name": "bot_subscription_record",
+    "args": [
+      null
+    ],
+    "kwargs": {},
+    "expected": null
+  },
+  {
+    "name": "bot_subscription_records",
+    "args": [
+      {
+        "id": 42,
+        "telegram_id": 777,
+        "balance_kopeks": 10000
+      }
+    ],
+    "kwargs": {},
+    "expected": []
+  },
+  {
+    "name": "sanitize_billing",
+    "args": [
+      {
+        "id": 42,
+        "telegram_id": 777,
+        "balance_kopeks": 10000
+      },
+      {
+        "items": [
+          {
+            "id": 1,
+            "user_id": 42,
+            "type": "deposit",
+            "is_completed": true,
+            "amount_kopeks": 10000,
+            "created_at": "2026-08-01T07:00:00Z"
+          },
+          {
+            "id": 2,
+            "user_id": 42,
+            "type": "subscription_payment",
+            "is_completed": true,
+            "amount_kopeks": -10000,
+            "created_at": "2026-08-01T08:00:00Z"
+          }
+        ]
+      },
+      20
+    ],
+    "kwargs": {},
+    "expected": {
+      "balance_kopeks": 10000,
+      "balance_rubles": 100.0,
+      "transactions": [
+        {
+          "id": 2,
+          "category": "subscription_purchase",
+          "direction": "debit",
+          "raw_type": "subscription_payment",
+          "amount_kopeks": 10000,
+          "amount_rubles": 100.0,
+          "payment_method": null,
+          "is_completed": true,
+          "description": null,
+          "created_at": "2026-08-01T08:00:00Z",
+          "completed_at": null
+        },
+        {
+          "id": 1,
+          "category": "deposit",
+          "direction": "credit",
+          "raw_type": "deposit",
+          "amount_kopeks": 10000,
+          "amount_rubles": 100.0,
+          "payment_method": null,
+          "is_completed": true,
+          "description": null,
+          "created_at": "2026-08-01T07:00:00Z",
+          "completed_at": null
+        }
+      ],
+      "latest_completed_deposit": {
+        "amount_kopeks": 10000,
+        "amount_rubles": 100.0,
+        "category": "deposit",
+        "created_at": "2026-08-01T07:00:00Z",
+        "completed_at": null
+      },
+      "latest_completed_subscription_purchase": {
+        "amount_kopeks": 10000,
+        "amount_rubles": 100.0,
+        "category": "subscription_purchase",
+        "created_at": "2026-08-01T08:00:00Z",
+        "completed_at": null
+      },
+      "purchased_after_latest_deposit": true,
+      "bot_subscriptions": [],
+      "meta": "deposit = a balance credit (money added to the balance), not a purchase. Only a completed subscription_payment confirms a purchase. bot_record_status is the bot-side purchase record, not the VPN panel status; verify the actual panel state via the separate Remnawave MCP."
+    }
+  },
+  {
+    "name": "accounting_status",
+    "args": [
+      true
+    ],
+    "kwargs": {},
+    "expected": "completed"
+  },
+  {
+    "name": "accounting_status",
+    "args": [
+      false
+    ],
+    "kwargs": {},
+    "expected": "not_completed"
+  },
+  {
+    "name": "accounting_status",
+    "args": [
+      null
+    ],
+    "kwargs": {},
+    "expected": "unknown"
+  },
+  {
+    "name": "accounting_status",
+    "args": [
+      "True"
+    ],
+    "kwargs": {},
+    "expected": "unknown"
+  },
+  {
+    "name": "accounting_status",
+    "args": [
+      0
+    ],
+    "kwargs": {},
+    "expected": "unknown"
+  },
+  {
+    "name": "accounting_status",
+    "args": [
+      1
+    ],
+    "kwargs": {},
+    "expected": "unknown"
+  },
+  {
+    "name": "bot_subscription_record",
+    "args": [
+      {
+        "id": 17,
+        "status": "active",
+        "actual_status": "active",
+        "is_trial": false,
+        "tariff_id": 4,
+        "tariff_name": "Standard",
+        "start_date": "2026-08-01T00:00:00Z",
+        "end_date": "2026-09-01T00:00:00Z",
+        "subscription_url": "https://secret.example/sub",
+        "subscription_crypto_link": "vless://secret",
+        "connected_squads": [
+          "secret-squad"
+        ],
+        "traffic_limit_gb": 500,
+        "device_limit": 5
+      }
+    ],
+    "kwargs": {},
+    "expected": {
+      "id": 17,
+      "bot_record_status": "active",
+      "bot_record_effective_status": "active",
+      "is_trial": false,
+      "tariff_id": 4,
+      "tariff_name": "Standard",
+      "created_at": null,
+      "start_date": "2026-08-01T00:00:00Z",
+      "end_date": "2026-09-01T00:00:00Z",
+      "autopay_enabled": null,
+      "autopay_days_before": null,
+      "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+    }
+  },
+  {
+    "name": "bot_subscription_records",
+    "args": [
+      {
+        "subscription": {
+          "id": 17,
+          "status": "active",
+          "actual_status": "active",
+          "is_trial": false,
+          "tariff_id": 4,
+          "tariff_name": "Standard",
+          "start_date": "2026-08-01T00:00:00Z",
+          "end_date": "2026-09-01T00:00:00Z",
+          "subscription_url": "https://secret.example/sub",
+          "subscription_crypto_link": "vless://secret",
+          "connected_squads": [
+            "secret-squad"
+          ],
+          "traffic_limit_gb": 500,
+          "device_limit": 5
+        }
+      }
+    ],
+    "kwargs": {},
+    "expected": [
+      {
+        "id": 17,
+        "bot_record_status": "active",
+        "bot_record_effective_status": "active",
+        "is_trial": false,
+        "tariff_id": 4,
+        "tariff_name": "Standard",
+        "created_at": null,
+        "start_date": "2026-08-01T00:00:00Z",
+        "end_date": "2026-09-01T00:00:00Z",
+        "autopay_enabled": null,
+        "autopay_days_before": null,
+        "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+      }
+    ]
+  },
+  {
+    "name": "bot_subscription_record",
+    "args": [
+      {
+        "id": 2,
+        "tariff_name": "Primary"
+      }
+    ],
+    "kwargs": {},
+    "expected": {
+      "id": 2,
+      "bot_record_status": null,
+      "bot_record_effective_status": null,
+      "is_trial": null,
+      "tariff_id": null,
+      "tariff_name": "Primary",
+      "created_at": null,
+      "start_date": null,
+      "end_date": null,
+      "autopay_enabled": null,
+      "autopay_days_before": null,
+      "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+    }
+  },
+  {
+    "name": "bot_subscription_record",
+    "args": [
+      {
+        "id": 2,
+        "tariff_name": "Duplicate"
+      }
+    ],
+    "kwargs": {},
+    "expected": {
+      "id": 2,
+      "bot_record_status": null,
+      "bot_record_effective_status": null,
+      "is_trial": null,
+      "tariff_id": null,
+      "tariff_name": "Duplicate",
+      "created_at": null,
+      "start_date": null,
+      "end_date": null,
+      "autopay_enabled": null,
+      "autopay_days_before": null,
+      "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+    }
+  },
+  {
+    "name": "bot_subscription_record",
+    "args": [
+      {
+        "id": 3,
+        "tariff_name": "Second"
+      }
+    ],
+    "kwargs": {},
+    "expected": {
+      "id": 3,
+      "bot_record_status": null,
+      "bot_record_effective_status": null,
+      "is_trial": null,
+      "tariff_id": null,
+      "tariff_name": "Second",
+      "created_at": null,
+      "start_date": null,
+      "end_date": null,
+      "autopay_enabled": null,
+      "autopay_days_before": null,
+      "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+    }
+  },
+  {
+    "name": "bot_subscription_records",
+    "args": [
+      {
+        "subscription": {
+          "id": 1,
+          "tariff_name": "Legacy"
+        },
+        "subscriptions": [
+          {
+            "id": 2,
+            "tariff_name": "Primary"
+          },
+          {
+            "id": 2,
+            "tariff_name": "Duplicate"
+          },
+          {
+            "id": 3,
+            "tariff_name": "Second"
+          }
+        ]
+      }
+    ],
+    "kwargs": {},
+    "expected": [
+      {
+        "id": 2,
+        "bot_record_status": null,
+        "bot_record_effective_status": null,
+        "is_trial": null,
+        "tariff_id": null,
+        "tariff_name": "Primary",
+        "created_at": null,
+        "start_date": null,
+        "end_date": null,
+        "autopay_enabled": null,
+        "autopay_days_before": null,
+        "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+      },
+      {
+        "id": 3,
+        "bot_record_status": null,
+        "bot_record_effective_status": null,
+        "is_trial": null,
+        "tariff_id": null,
+        "tariff_name": "Second",
+        "created_at": null,
+        "start_date": null,
+        "end_date": null,
+        "autopay_enabled": null,
+        "autopay_days_before": null,
+        "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+      }
+    ]
+  },
+  {
+    "name": "bot_subscription_record",
+    "args": [
+      {
+        "id": 1,
+        "tariff_name": "Legacy"
+      }
+    ],
+    "kwargs": {},
+    "expected": {
+      "id": 1,
+      "bot_record_status": null,
+      "bot_record_effective_status": null,
+      "is_trial": null,
+      "tariff_id": null,
+      "tariff_name": "Legacy",
+      "created_at": null,
+      "start_date": null,
+      "end_date": null,
+      "autopay_enabled": null,
+      "autopay_days_before": null,
+      "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+    }
+  },
+  {
+    "name": "bot_subscription_records",
+    "args": [
+      {
+        "subscription": {
+          "id": 1,
+          "tariff_name": "Legacy"
+        },
+        "subscriptions": []
+      }
+    ],
+    "kwargs": {},
+    "expected": [
+      {
+        "id": 1,
+        "bot_record_status": null,
+        "bot_record_effective_status": null,
+        "is_trial": null,
+        "tariff_id": null,
+        "tariff_name": "Legacy",
+        "created_at": null,
+        "start_date": null,
+        "end_date": null,
+        "autopay_enabled": null,
+        "autopay_days_before": null,
+        "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+      }
+    ]
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 10000,
+      "rubles": 100.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 10000,
+      "amount_rubles": 100.0
+    }
+  },
+  {
+    "name": "latest_completed_deposit",
+    "args": [
+      [
+        {
+          "id": 1,
+          "type": "deposit",
+          "is_completed": true,
+          "created_at": "2026-08-01T10:00:00+03:00",
+          "amount_kopeks": 10000
+        },
+        {
+          "id": 2,
+          "type": "subscription_payment",
+          "is_completed": true,
+          "created_at": "2026-08-01T08:30:00Z",
+          "amount_kopeks": -10000
+        }
+      ]
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 10000,
+      "amount_rubles": 100.0,
+      "category": "deposit",
+      "created_at": "2026-08-01T10:00:00+03:00",
+      "completed_at": null
+    }
+  },
+  {
+    "name": "purchased_after_latest_deposit",
+    "args": [
+      [
+        {
+          "id": 1,
+          "type": "deposit",
+          "is_completed": true,
+          "created_at": "2026-08-01T10:00:00+03:00",
+          "amount_kopeks": 10000
+        },
+        {
+          "id": 2,
+          "type": "subscription_payment",
+          "is_completed": true,
+          "created_at": "2026-08-01T08:30:00Z",
+          "amount_kopeks": -10000
+        }
+      ]
+    ],
+    "kwargs": {},
+    "expected": true
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      2000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 2000,
+      "rubles": 20.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      2000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 2000,
+      "amount_rubles": 20.0
+    }
+  },
+  {
+    "name": "latest_completed_deposit",
+    "args": [
+      [
+        {
+          "id": 1,
+          "type": "deposit",
+          "is_completed": true,
+          "created_at": "2026-08-01T12:00:00+05:00",
+          "amount_kopeks": 1000
+        },
+        {
+          "id": 2,
+          "type": "deposit",
+          "is_completed": true,
+          "created_at": "2026-08-01T08:00:00Z",
+          "amount_kopeks": 2000
+        }
+      ]
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 2000,
+      "amount_rubles": 20.0,
+      "category": "deposit",
+      "created_at": "2026-08-01T08:00:00Z",
+      "completed_at": null
+    }
+  },
+  {
+    "name": "latest_completed_deposit",
+    "args": [
+      [
+        {
+          "type": "deposit",
+          "is_completed": "true",
+          "created_at": "2026-08-01T08:00:00Z",
+          "amount_kopeks": 1000
+        }
+      ]
+    ],
+    "kwargs": {},
+    "expected": null
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      -30000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": -30000,
+      "rubles": -300.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      -30000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 30000,
+      "amount_rubles": 300.0
+    }
+  },
+  {
+    "name": "accounting_status",
+    "args": [
+      true
+    ],
+    "kwargs": {},
+    "expected": "completed"
+  },
+  {
+    "name": "sanitize_gifts",
+    "args": [
+      {
+        "items": [
+          {
+            "id": 99,
+            "user_id": 42,
+            "type": "gift_payment",
+            "is_completed": true,
+            "amount_kopeks": -30000,
+            "payment_method": "balance",
+            "recipient_user_id": 12345,
+            "gift_token": "secret-token-xyz",
+            "description": "Gift for friend",
+            "created_at": "2026-08-01T12:00:00Z",
+            "completed_at": "2026-08-01T12:00:05Z"
+          }
+        ]
+      }
+    ],
+    "kwargs": {
+      "owner_id": 42,
+      "limit": 20
+    },
+    "expected": {
+      "scope": "own_gift_purchase_transactions",
+      "gift_purchases": [
+        {
+          "id": 99,
+          "amount_kopeks": 30000,
+          "amount_rubles": 300.0,
+          "payment_method": "balance",
+          "accounting_status": "completed",
+          "created_at": "2026-08-01T12:00:00Z",
+          "completed_at": "2026-08-01T12:00:05Z"
+        }
+      ],
+      "received_gifts_available": false,
+      "activation_status_available": false,
+      "meta": "The existing Web API exposes gift purchase accounting only."
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      50000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 50000,
+      "rubles": 500.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      50000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 50000,
+      "amount_rubles": 500.0
+    }
+  },
+  {
+    "name": "accounting_status",
+    "args": [
+      true
+    ],
+    "kwargs": {},
+    "expected": "completed"
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 10000,
+      "rubles": 100.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 10000,
+      "amount_rubles": 100.0
+    }
+  },
+  {
+    "name": "accounting_status",
+    "args": [
+      false
+    ],
+    "kwargs": {},
+    "expected": "not_completed"
+  },
+  {
+    "name": "sanitize_payment_status",
+    "args": [
+      {
+        "items": [
+          {
+            "id": 1,
+            "user_id": 42,
+            "type": "deposit",
+            "is_completed": true,
+            "amount_kopeks": 50000,
+            "payment_method": "sbp",
+            "external_id": "provider-tx-secret",
+            "description": "Provider secret note",
+            "created_at": "2026-08-01T12:00:00Z",
+            "completed_at": "2026-08-01T12:05:00Z"
+          },
+          {
+            "id": 2,
+            "user_id": 42,
+            "type": "deposit",
+            "is_completed": false,
+            "amount_kopeks": 10000,
+            "payment_method": "card",
+            "created_at": "2026-08-01T11:00:00Z",
+            "completed_at": null
+          }
+        ]
+      }
+    ],
+    "kwargs": {
+      "owner_id": 42,
+      "limit": 5
+    },
+    "expected": {
+      "scope": "bedolaga_accounting_transactions",
+      "payments": [
+        {
+          "id": 1,
+          "category": "deposit",
+          "direction": "credit",
+          "raw_type": "deposit",
+          "amount_kopeks": 50000,
+          "amount_rubles": 500.0,
+          "payment_method": "sbp",
+          "accounting_status": "completed",
+          "created_at": "2026-08-01T12:00:00Z",
+          "completed_at": "2026-08-01T12:05:00Z"
+        },
+        {
+          "id": 2,
+          "category": "deposit",
+          "direction": "credit",
+          "raw_type": "deposit",
+          "amount_kopeks": 10000,
+          "amount_rubles": 100.0,
+          "payment_method": "card",
+          "accounting_status": "not_completed",
+          "created_at": "2026-08-01T11:00:00Z",
+          "completed_at": null
+        }
+      ],
+      "meta": "This does not expose payment-provider attempt status. not_completed is not proof of pending or failure."
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      50000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 50000,
+      "rubles": 500.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      50000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 50000,
+      "amount_rubles": 500.0
+    }
+  },
+  {
+    "name": "accounting_status",
+    "args": [
+      true
+    ],
+    "kwargs": {},
+    "expected": "completed"
+  },
+  {
+    "name": "sanitize_payment_status",
+    "args": [
+      {
+        "items": [
+          {
+            "id": 999,
+            "user_id": 42,
+            "type": "deposit",
+            "is_completed": true,
+            "amount_kopeks": 50000,
+            "created_at": "2026-08-01T12:00:00Z",
+            "completed_at": "2026-08-01T12:01:00Z"
+          }
+        ]
+      }
+    ],
+    "kwargs": {
+      "owner_id": 42,
+      "limit": 5
+    },
+    "expected": {
+      "scope": "bedolaga_accounting_transactions",
+      "payments": [
+        {
+          "id": 999,
+          "category": "deposit",
+          "direction": "credit",
+          "raw_type": "deposit",
+          "amount_kopeks": 50000,
+          "amount_rubles": 500.0,
+          "payment_method": null,
+          "accounting_status": "completed",
+          "created_at": "2026-08-01T12:00:00Z",
+          "completed_at": "2026-08-01T12:01:00Z"
+        }
+      ],
+      "meta": "This does not expose payment-provider attempt status. not_completed is not proof of pending or failure."
+    }
+  },
+  {
+    "name": "mask_code",
+    "args": [
+      "SUMMER"
+    ],
+    "kwargs": {},
+    "expected": "SU***ER"
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 10000,
+      "rubles": 100.0
+    }
+  },
+  {
+    "name": "balance_money",
+    "args": [
+      10000
+    ],
+    "kwargs": {},
+    "expected": {
+      "balance_kopeks": 10000,
+      "balance_rubles": 100.0
+    }
+  },
+  {
+    "name": "sanitize_promocode",
+    "args": [
+      {
+        "id": 1,
+        "code": "SUMMER",
+        "is_active": true,
+        "is_valid": true,
+        "type": "balance",
+        "balance_bonus_kopeks": 10000,
+        "subscription_days": 0,
+        "traffic_gb": 0,
+        "uses_left": 12,
+        "valid_from": "2026-08-01T00:00:00Z",
+        "valid_until": "2030-01-01T00:00:00Z",
+        "created_by": "admin@example.com"
+      },
+      "SUMMER"
+    ],
+    "kwargs": {
+      "lookup_incomplete": false
+    },
+    "expected": {
+      "scope": "global_promocode_definition",
+      "code_masked": "SU***ER",
+      "globally_valid": true,
+      "reason_code": null,
+      "type": "balance",
+      "balance_bonus_kopeks": 10000,
+      "balance_bonus_rubles": 100.0,
+      "subscription_days": 0,
+      "traffic_gb": 0,
+      "uses_left": 12,
+      "valid_from": "2026-08-01T00:00:00Z",
+      "valid_until": "2030-01-01T00:00:00Z",
+      "user_eligibility": "unknown",
+      "meta": "Global validity only; the existing API cannot check whether this user already used or may apply the code."
+    }
+  },
+  {
+    "name": "mask_code",
+    "args": [
+      "UNKNOWN"
+    ],
+    "kwargs": {},
+    "expected": "UN***WN"
+  },
+  {
+    "name": "sanitize_promocode",
+    "args": [
+      null,
+      "UNKNOWN"
+    ],
+    "kwargs": {
+      "lookup_incomplete": false
+    },
+    "expected": {
+      "scope": "global_promocode_definition",
+      "code_masked": "UN***WN",
+      "globally_valid": false,
+      "reason_code": "not_found",
+      "type": null,
+      "balance_bonus_kopeks": null,
+      "balance_bonus_rubles": null,
+      "subscription_days": 0,
+      "traffic_gb": 0,
+      "uses_left": null,
+      "valid_from": null,
+      "valid_until": null,
+      "user_eligibility": "unknown",
+      "meta": "Global validity only; the existing API cannot check whether this user already used or may apply the code."
+    }
+  },
+  {
+    "name": "mask_code",
+    "args": [
+      "TARGET"
+    ],
+    "kwargs": {},
+    "expected": "TA***ET"
+  },
+  {
+    "name": "sanitize_promocode",
+    "args": [
+      null,
+      "TARGET"
+    ],
+    "kwargs": {
+      "lookup_incomplete": true
+    },
+    "expected": {
+      "scope": "global_promocode_definition",
+      "code_masked": "TA***ET",
+      "globally_valid": false,
+      "reason_code": "lookup_incomplete",
+      "type": null,
+      "balance_bonus_kopeks": null,
+      "balance_bonus_rubles": null,
+      "subscription_days": 0,
+      "traffic_gb": 0,
+      "uses_left": null,
+      "valid_from": null,
+      "valid_until": null,
+      "user_eligibility": "unknown",
+      "meta": "Global validity only; the existing API cannot check whether this user already used or may apply the code."
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      35000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 35000,
+      "rubles": 350.0
+    }
+  },
+  {
+    "name": "balance_money",
+    "args": [
+      35000
+    ],
+    "kwargs": {},
+    "expected": {
+      "balance_kopeks": 35000,
+      "balance_rubles": 350.0
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      -30000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": -30000,
+      "rubles": -300.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      -30000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 30000,
+      "amount_rubles": 300.0
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      35000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 35000,
+      "rubles": 350.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      35000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 35000,
+      "amount_rubles": 350.0
+    }
+  },
+  {
+    "name": "latest_completed_deposit",
+    "args": [
+      [
+        {
+          "id": 1,
+          "user_id": 42,
+          "type": "deposit",
+          "is_completed": true,
+          "amount_kopeks": 35000,
+          "created_at": "2026-08-01T10:00:00+03:00",
+          "external_id": "must-not-leak"
+        },
+        {
+          "id": 2,
+          "user_id": 42,
+          "type": "subscription_payment",
+          "is_completed": true,
+          "amount_kopeks": -30000,
+          "created_at": "2026-08-01T08:30:00Z"
+        }
+      ]
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 35000,
+      "amount_rubles": 350.0,
+      "category": "deposit",
+      "created_at": "2026-08-01T10:00:00+03:00",
+      "completed_at": null
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      -30000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": -30000,
+      "rubles": -300.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      -30000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 30000,
+      "amount_rubles": 300.0
+    }
+  },
+  {
+    "name": "latest_completed_subscription_purchase",
+    "args": [
+      [
+        {
+          "id": 1,
+          "user_id": 42,
+          "type": "deposit",
+          "is_completed": true,
+          "amount_kopeks": 35000,
+          "created_at": "2026-08-01T10:00:00+03:00",
+          "external_id": "must-not-leak"
+        },
+        {
+          "id": 2,
+          "user_id": 42,
+          "type": "subscription_payment",
+          "is_completed": true,
+          "amount_kopeks": -30000,
+          "created_at": "2026-08-01T08:30:00Z"
+        }
+      ]
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 30000,
+      "amount_rubles": 300.0,
+      "category": "subscription_purchase",
+      "created_at": "2026-08-01T08:30:00Z",
+      "completed_at": null
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      35000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 35000,
+      "rubles": 350.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      35000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 35000,
+      "amount_rubles": 350.0
+    }
+  },
+  {
+    "name": "latest_completed_deposit",
+    "args": [
+      [
+        {
+          "id": 1,
+          "user_id": 42,
+          "type": "deposit",
+          "is_completed": true,
+          "amount_kopeks": 35000,
+          "created_at": "2026-08-01T10:00:00+03:00",
+          "external_id": "must-not-leak"
+        },
+        {
+          "id": 2,
+          "user_id": 42,
+          "type": "subscription_payment",
+          "is_completed": true,
+          "amount_kopeks": -30000,
+          "created_at": "2026-08-01T08:30:00Z"
+        }
+      ]
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 35000,
+      "amount_rubles": 350.0,
+      "category": "deposit",
+      "created_at": "2026-08-01T10:00:00+03:00",
+      "completed_at": null
+    }
+  },
+  {
+    "name": "purchased_after_latest_deposit",
+    "args": [
+      [
+        {
+          "id": 1,
+          "user_id": 42,
+          "type": "deposit",
+          "is_completed": true,
+          "amount_kopeks": 35000,
+          "created_at": "2026-08-01T10:00:00+03:00",
+          "external_id": "must-not-leak"
+        },
+        {
+          "id": 2,
+          "user_id": 42,
+          "type": "subscription_payment",
+          "is_completed": true,
+          "amount_kopeks": -30000,
+          "created_at": "2026-08-01T08:30:00Z"
+        }
+      ]
+    ],
+    "kwargs": {},
+    "expected": true
+  },
+  {
+    "name": "bot_subscription_record",
+    "args": [
+      {
+        "id": 11,
+        "status": "active",
+        "actual_status": "active",
+        "is_trial": false,
+        "tariff_id": 5,
+        "tariff_name": "Plus",
+        "start_date": "2026-08-01T00:00:00Z",
+        "end_date": "2026-09-01T00:00:00Z",
+        "subscription_url": "https://must-not-leak.example"
+      }
+    ],
+    "kwargs": {},
+    "expected": {
+      "id": 11,
+      "bot_record_status": "active",
+      "bot_record_effective_status": "active",
+      "is_trial": false,
+      "tariff_id": 5,
+      "tariff_name": "Plus",
+      "created_at": null,
+      "start_date": "2026-08-01T00:00:00Z",
+      "end_date": "2026-09-01T00:00:00Z",
+      "autopay_enabled": null,
+      "autopay_days_before": null,
+      "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+    }
+  },
+  {
+    "name": "bot_subscription_records",
+    "args": [
+      {
+        "id": 42,
+        "telegram_id": 777,
+        "email": "must-not-leak@example.com",
+        "username": "owner",
+        "first_name": "Owner",
+        "last_name": "User",
+        "status": "active",
+        "balance_kopeks": 35000,
+        "has_made_first_topup": true,
+        "has_had_paid_subscription": true,
+        "referral_code": "SAFE42",
+        "referred_by_id": 9,
+        "promo_group": {
+          "name": "Friends",
+          "server_discount_percent": 10,
+          "traffic_discount_percent": 20,
+          "device_discount_percent": 30,
+          "internal_rule": "must-not-leak"
+        },
+        "subscriptions": [
+          {
+            "id": 11,
+            "status": "active",
+            "actual_status": "active",
+            "is_trial": false,
+            "tariff_id": 5,
+            "tariff_name": "Plus",
+            "start_date": "2026-08-01T00:00:00Z",
+            "end_date": "2026-09-01T00:00:00Z",
+            "subscription_url": "https://must-not-leak.example"
+          }
+        ]
+      }
+    ],
+    "kwargs": {},
+    "expected": [
+      {
+        "id": 11,
+        "bot_record_status": "active",
+        "bot_record_effective_status": "active",
+        "is_trial": false,
+        "tariff_id": 5,
+        "tariff_name": "Plus",
+        "created_at": null,
+        "start_date": "2026-08-01T00:00:00Z",
+        "end_date": "2026-09-01T00:00:00Z",
+        "autopay_enabled": null,
+        "autopay_days_before": null,
+        "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+      }
+    ]
+  },
+  {
+    "name": "sanitize_billing",
+    "args": [
+      {
+        "id": 42,
+        "telegram_id": 777,
+        "email": "must-not-leak@example.com",
+        "username": "owner",
+        "first_name": "Owner",
+        "last_name": "User",
+        "status": "active",
+        "balance_kopeks": 35000,
+        "has_made_first_topup": true,
+        "has_had_paid_subscription": true,
+        "referral_code": "SAFE42",
+        "referred_by_id": 9,
+        "promo_group": {
+          "name": "Friends",
+          "server_discount_percent": 10,
+          "traffic_discount_percent": 20,
+          "device_discount_percent": 30,
+          "internal_rule": "must-not-leak"
+        },
+        "subscriptions": [
+          {
+            "id": 11,
+            "status": "active",
+            "actual_status": "active",
+            "is_trial": false,
+            "tariff_id": 5,
+            "tariff_name": "Plus",
+            "start_date": "2026-08-01T00:00:00Z",
+            "end_date": "2026-09-01T00:00:00Z",
+            "subscription_url": "https://must-not-leak.example"
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "id": 1,
+            "user_id": 42,
+            "type": "deposit",
+            "is_completed": true,
+            "amount_kopeks": 35000,
+            "created_at": "2026-08-01T10:00:00+03:00",
+            "external_id": "must-not-leak"
+          },
+          {
+            "id": 2,
+            "user_id": 42,
+            "type": "subscription_payment",
+            "is_completed": true,
+            "amount_kopeks": -30000,
+            "created_at": "2026-08-01T08:30:00Z"
+          },
+          {
+            "id": 3,
+            "user_id": 99,
+            "type": "deposit",
+            "is_completed": true,
+            "amount_kopeks": 99999,
+            "created_at": "2026-08-01T09:00:00Z"
+          }
+        ]
+      }
+    ],
+    "kwargs": {
+      "limit": 1
+    },
+    "expected": {
+      "balance_kopeks": 35000,
+      "balance_rubles": 350.0,
+      "transactions": [
+        {
+          "id": 2,
+          "category": "subscription_purchase",
+          "direction": "debit",
+          "raw_type": "subscription_payment",
+          "amount_kopeks": 30000,
+          "amount_rubles": 300.0,
+          "payment_method": null,
+          "is_completed": true,
+          "description": null,
+          "created_at": "2026-08-01T08:30:00Z",
+          "completed_at": null
+        }
+      ],
+      "latest_completed_deposit": {
+        "amount_kopeks": 35000,
+        "amount_rubles": 350.0,
+        "category": "deposit",
+        "created_at": "2026-08-01T10:00:00+03:00",
+        "completed_at": null
+      },
+      "latest_completed_subscription_purchase": {
+        "amount_kopeks": 30000,
+        "amount_rubles": 300.0,
+        "category": "subscription_purchase",
+        "created_at": "2026-08-01T08:30:00Z",
+        "completed_at": null
+      },
+      "purchased_after_latest_deposit": true,
+      "bot_subscriptions": [
+        {
+          "id": 11,
+          "bot_record_status": "active",
+          "bot_record_effective_status": "active",
+          "is_trial": false,
+          "tariff_id": 5,
+          "tariff_name": "Plus",
+          "created_at": null,
+          "start_date": "2026-08-01T00:00:00Z",
+          "end_date": "2026-09-01T00:00:00Z",
+          "autopay_enabled": null,
+          "autopay_days_before": null,
+          "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+        }
+      ],
+      "meta": "deposit = a balance credit (money added to the balance), not a purchase. Only a completed subscription_payment confirms a purchase. bot_record_status is the bot-side purchase record, not the VPN panel status; verify the actual panel state via the separate Remnawave MCP."
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      -30000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": -30000,
+      "rubles": -300.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      -30000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 30000,
+      "amount_rubles": 300.0
+    }
+  },
+  {
+    "name": "accounting_status",
+    "args": [
+      true
+    ],
+    "kwargs": {},
+    "expected": "completed"
+  },
+  {
+    "name": "sanitize_gifts",
+    "args": [
+      {
+        "items": [
+          {
+            "id": 99,
+            "user_id": 42,
+            "type": "gift_purchase",
+            "is_completed": true,
+            "amount_kopeks": -30000,
+            "payment_method": "card",
+            "gift_token": "secret-token",
+            "recipient": "secret-recipient",
+            "description": "Secret gift note",
+            "external_id": "secret-ext-id",
+            "created_at": "2026-08-01T12:00:00Z",
+            "completed_at": "2026-08-01T12:00:05Z"
+          },
+          {
+            "id": 100,
+            "user_id": 999,
+            "type": "gift_purchase",
+            "is_completed": true,
+            "amount_kopeks": -30000
+          },
+          {
+            "id": 101,
+            "user_id": 42,
+            "type": "deposit",
+            "is_completed": true,
+            "amount_kopeks": 50000
+          }
+        ]
+      }
+    ],
+    "kwargs": {
+      "owner_id": 42,
+      "limit": 20
+    },
+    "expected": {
+      "scope": "own_gift_purchase_transactions",
+      "gift_purchases": [
+        {
+          "id": 99,
+          "amount_kopeks": 30000,
+          "amount_rubles": 300.0,
+          "payment_method": "card",
+          "accounting_status": "completed",
+          "created_at": "2026-08-01T12:00:00Z",
+          "completed_at": "2026-08-01T12:00:05Z"
+        }
+      ],
+      "received_gifts_available": false,
+      "activation_status_available": false,
+      "meta": "The existing Web API exposes gift purchase accounting only."
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      100000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 100000,
+      "rubles": 1000.0
+    }
+  },
+  {
+    "name": "amount_money",
+    "args": [
+      100000
+    ],
+    "kwargs": {},
+    "expected": {
+      "amount_kopeks": 100000,
+      "amount_rubles": 1000.0
+    }
+  },
+  {
+    "name": "accounting_status",
+    "args": [
+      true
+    ],
+    "kwargs": {},
+    "expected": "completed"
+  },
+  {
+    "name": "sanitize_payment_status",
+    "args": [
+      {
+        "items": [
+          {
+            "id": 1,
+            "user_id": 42,
+            "type": "deposit",
+            "is_completed": true,
+            "amount_kopeks": 100000,
+            "payment_method": "tinkoff",
+            "external_id": "secret-ext-id",
+            "created_at": "2026-08-01T12:00:00Z",
+            "completed_at": "2026-08-01T12:01:00Z"
+          },
+          {
+            "id": 2,
+            "user_id": 42,
+            "type": "referral_reward",
+            "is_completed": true,
+            "amount_kopeks": 5000
+          },
+          {
+            "id": 3,
+            "user_id": 999,
+            "type": "deposit",
+            "is_completed": true,
+            "amount_kopeks": 10000
+          }
+        ]
+      }
+    ],
+    "kwargs": {
+      "owner_id": 42,
+      "limit": 5
+    },
+    "expected": {
+      "scope": "bedolaga_accounting_transactions",
+      "payments": [
+        {
+          "id": 1,
+          "category": "deposit",
+          "direction": "credit",
+          "raw_type": "deposit",
+          "amount_kopeks": 100000,
+          "amount_rubles": 1000.0,
+          "payment_method": "tinkoff",
+          "accounting_status": "completed",
+          "created_at": "2026-08-01T12:00:00Z",
+          "completed_at": "2026-08-01T12:01:00Z"
+        }
+      ],
+      "meta": "This does not expose payment-provider attempt status. not_completed is not proof of pending or failure."
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      5000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 5000,
+      "rubles": 50.0
+    }
+  },
+  {
+    "name": "total_earned_money",
+    "args": [
+      5000
+    ],
+    "kwargs": {},
+    "expected": {
+      "total_earned_kopeks": 5000,
+      "total_earned_rubles": 50.0
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      1000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 1000,
+      "rubles": 10.0
+    }
+  },
+  {
+    "name": "month_earned_money",
+    "args": [
+      1000
+    ],
+    "kwargs": {},
+    "expected": {
+      "month_earned_kopeks": 1000,
+      "month_earned_rubles": 10.0
+    }
+  },
+  {
+    "name": "sanitize_referrals",
+    "args": [
+      {
+        "referrer": {
+          "referral_code": "SAFE42",
+          "effective_referral_commission_percent": 15,
+          "invited_count": 3,
+          "active_referrals": 2,
+          "total_earned_kopeks": 5000,
+          "month_earned_kopeks": 1000
+        },
+        "referrals": {
+          "items": [
+            {
+              "telegram_id": 123,
+              "email": "third-party@example.com",
+              "username": "third-party"
+            }
+          ]
+        }
+      }
+    ],
+    "kwargs": {
+      "raw_user": {
+        "id": 42,
+        "telegram_id": 777,
+        "email": "must-not-leak@example.com",
+        "username": "owner",
+        "first_name": "Owner",
+        "last_name": "User",
+        "status": "active",
+        "balance_kopeks": 35000,
+        "has_made_first_topup": true,
+        "has_had_paid_subscription": true,
+        "referral_code": "SAFE42",
+        "referred_by_id": 9,
+        "promo_group": {
+          "name": "Friends",
+          "server_discount_percent": 10,
+          "traffic_discount_percent": 20,
+          "device_discount_percent": 30,
+          "internal_rule": "must-not-leak"
+        },
+        "subscriptions": [
+          {
+            "id": 11,
+            "status": "active",
+            "actual_status": "active",
+            "is_trial": false,
+            "tariff_id": 5,
+            "tariff_name": "Plus",
+            "start_date": "2026-08-01T00:00:00Z",
+            "end_date": "2026-09-01T00:00:00Z",
+            "subscription_url": "https://must-not-leak.example"
+          }
+        ]
+      }
+    },
+    "expected": {
+      "referral_code": "SAFE42",
+      "was_referred": true,
+      "effective_referral_commission_percent": 15,
+      "invited_count": 3,
+      "active_referrals": 2,
+      "total_earned_kopeks": 5000,
+      "total_earned_rubles": 50.0,
+      "month_earned_kopeks": 1000,
+      "month_earned_rubles": 10.0,
+      "recent_referral_rewards": [],
+      "meta": "Aggregates belong to the account owner only; invited users' personal data is intentionally excluded."
+    }
+  },
+  {
+    "name": "bot_subscription_record",
+    "args": [
+      {
+        "id": 11,
+        "user_id": 42,
+        "status": "active",
+        "actual_status": "active",
+        "is_trial": false,
+        "tariff_id": 5,
+        "created_at": "2026-07-31T12:00:00Z",
+        "start_date": "2026-08-01T00:00:00Z",
+        "end_date": "2026-09-01T00:00:00Z",
+        "autopay_enabled": true,
+        "autopay_days_before": 3,
+        "subscription_url": "https://secret.url",
+        "subscription_crypto_link": "vless://secret",
+        "connected_squads": [
+          "squad1"
+        ],
+        "traffic_limit_gb": 100,
+        "device_limit": 2
+      }
+    ],
+    "kwargs": {},
+    "expected": {
+      "id": 11,
+      "bot_record_status": "active",
+      "bot_record_effective_status": "active",
+      "is_trial": false,
+      "tariff_id": 5,
+      "tariff_name": null,
+      "created_at": "2026-07-31T12:00:00Z",
+      "start_date": "2026-08-01T00:00:00Z",
+      "end_date": "2026-09-01T00:00:00Z",
+      "autopay_enabled": true,
+      "autopay_days_before": 3,
+      "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+    }
+  },
+  {
+    "name": "bot_subscription_record",
+    "args": [
+      {
+        "id": 10,
+        "user_id": 42,
+        "status": "expired",
+        "actual_status": "expired",
+        "is_trial": true,
+        "tariff_id": 3,
+        "created_at": "2026-06-01T12:00:00Z",
+        "start_date": "2026-06-01T12:00:00Z",
+        "end_date": "2026-07-01T12:00:00Z"
+      }
+    ],
+    "kwargs": {},
+    "expected": {
+      "id": 10,
+      "bot_record_status": "expired",
+      "bot_record_effective_status": "expired",
+      "is_trial": true,
+      "tariff_id": 3,
+      "tariff_name": null,
+      "created_at": "2026-06-01T12:00:00Z",
+      "start_date": "2026-06-01T12:00:00Z",
+      "end_date": "2026-07-01T12:00:00Z",
+      "autopay_enabled": null,
+      "autopay_days_before": null,
+      "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+    }
+  },
+  {
+    "name": "sanitize_subscriptions",
+    "args": [
+      {
+        "id": 42,
+        "telegram_id": 777,
+        "email": "must-not-leak@example.com",
+        "username": "owner",
+        "first_name": "Owner",
+        "last_name": "User",
+        "status": "active",
+        "balance_kopeks": 35000,
+        "has_made_first_topup": true,
+        "has_had_paid_subscription": true,
+        "referral_code": "SAFE42",
+        "referred_by_id": 9,
+        "promo_group": {
+          "name": "Friends",
+          "server_discount_percent": 10,
+          "traffic_discount_percent": 20,
+          "device_discount_percent": 30,
+          "internal_rule": "must-not-leak"
+        },
+        "subscriptions": [
+          {
+            "id": 11,
+            "status": "active",
+            "actual_status": "active",
+            "is_trial": false,
+            "tariff_id": 5,
+            "tariff_name": "Plus",
+            "start_date": "2026-08-01T00:00:00Z",
+            "end_date": "2026-09-01T00:00:00Z",
+            "subscription_url": "https://must-not-leak.example"
+          }
+        ]
+      },
+      [
+        {
+          "id": 11,
+          "user_id": 42,
+          "status": "active",
+          "actual_status": "active",
+          "is_trial": false,
+          "tariff_id": 5,
+          "created_at": "2026-07-31T12:00:00Z",
+          "start_date": "2026-08-01T00:00:00Z",
+          "end_date": "2026-09-01T00:00:00Z",
+          "autopay_enabled": true,
+          "autopay_days_before": 3,
+          "subscription_url": "https://secret.url",
+          "subscription_crypto_link": "vless://secret",
+          "connected_squads": [
+            "squad1"
+          ],
+          "traffic_limit_gb": 100,
+          "device_limit": 2
+        },
+        {
+          "id": 99,
+          "user_id": 999,
+          "status": "active",
+          "tariff_id": 1
+        },
+        {
+          "id": 10,
+          "user_id": 42,
+          "status": "expired",
+          "actual_status": "expired",
+          "is_trial": true,
+          "tariff_id": 3,
+          "created_at": "2026-06-01T12:00:00Z",
+          "start_date": "2026-06-01T12:00:00Z",
+          "end_date": "2026-07-01T12:00:00Z"
+        }
+      ]
+    ],
+    "kwargs": {
+      "owner_id": 42
+    },
+    "expected": {
+      "has_subscription_records": true,
+      "active_record_count": 1,
+      "subscriptions": [
+        {
+          "id": 11,
+          "bot_record_status": "active",
+          "bot_record_effective_status": "active",
+          "is_trial": false,
+          "tariff_id": 5,
+          "tariff_name": "Plus",
+          "created_at": "2026-07-31T12:00:00Z",
+          "start_date": "2026-08-01T00:00:00Z",
+          "end_date": "2026-09-01T00:00:00Z",
+          "autopay_enabled": true,
+          "autopay_days_before": 3,
+          "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+        },
+        {
+          "id": 10,
+          "bot_record_status": "expired",
+          "bot_record_effective_status": "expired",
+          "is_trial": true,
+          "tariff_id": 3,
+          "tariff_name": null,
+          "created_at": "2026-06-01T12:00:00Z",
+          "start_date": "2026-06-01T12:00:00Z",
+          "end_date": "2026-07-01T12:00:00Z",
+          "autopay_enabled": null,
+          "autopay_days_before": null,
+          "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+        }
+      ],
+      "meta": "Bedolaga subscription records are not the VPN panel status."
+    }
+  },
+  {
+    "name": "sanitize_tickets",
+    "args": [
+      [
+        {
+          "id": 101,
+          "user_id": 42,
+          "title": "Cannot connect",
+          "status": "open",
+          "priority": "high",
+          "created_at": "2026-08-01T10:00:00Z",
+          "updated_at": "2026-08-01T11:00:00Z",
+          "closed_at": null,
+          "messages": [
+            {
+              "id": 1,
+              "body": "Sensitive chat message"
+            }
+          ],
+          "reply_blocks": [
+            {
+              "secret": "data"
+            }
+          ],
+          "media_files": [
+            "attachment.png"
+          ]
+        },
+        {
+          "id": 102,
+          "user_id": 999,
+          "title": "Other user ticket",
+          "status": "closed",
+          "priority": "low"
+        }
+      ]
+    ],
+    "kwargs": {
+      "owner_id": 42
+    },
+    "expected": {
+      "has_tickets": true,
+      "tickets": [
+        {
+          "id": 101,
+          "title": "Cannot connect",
+          "status": "open",
+          "priority": "high",
+          "created_at": "2026-08-01T10:00:00Z",
+          "updated_at": "2026-08-01T11:00:00Z",
+          "closed_at": null
+        }
+      ],
+      "meta": "Tickets belong to the account owner only; messages and media are intentionally excluded."
+    }
+  },
+  {
+    "name": "money_pair",
+    "args": [
+      35000
+    ],
+    "kwargs": {},
+    "expected": {
+      "kopeks": 35000,
+      "rubles": 350.0
+    }
+  },
+  {
+    "name": "balance_money",
+    "args": [
+      35000
+    ],
+    "kwargs": {},
+    "expected": {
+      "balance_kopeks": 35000,
+      "balance_rubles": 350.0
+    }
+  },
+  {
+    "name": "sanitize_user",
+    "args": [
+      {
+        "id": 42,
+        "telegram_id": 777,
+        "email": "must-not-leak@example.com",
+        "username": "owner",
+        "first_name": "Owner",
+        "last_name": "User",
+        "status": "active",
+        "balance_kopeks": 35000,
+        "has_made_first_topup": true,
+        "has_had_paid_subscription": true,
+        "referral_code": "SAFE42",
+        "referred_by_id": 9,
+        "promo_group": {
+          "name": "Friends",
+          "server_discount_percent": 10,
+          "traffic_discount_percent": 20,
+          "device_discount_percent": 30,
+          "internal_rule": "must-not-leak"
+        },
+        "subscriptions": [
+          {
+            "id": 11,
+            "status": "active",
+            "actual_status": "active",
+            "is_trial": false,
+            "tariff_id": 5,
+            "tariff_name": "Plus",
+            "start_date": "2026-08-01T00:00:00Z",
+            "end_date": "2026-09-01T00:00:00Z",
+            "subscription_url": "https://must-not-leak.example"
+          }
+        ]
+      }
+    ],
+    "kwargs": {},
+    "expected": {
+      "found": true,
+      "telegram_id": 777,
+      "display_name": "Owner User",
+      "status": "active",
+      "balance_kopeks": 35000,
+      "balance_rubles": 350.0,
+      "has_made_first_topup": true,
+      "has_had_paid_subscription": true,
+      "referral_code": "SAFE42",
+      "was_referred": true,
+      "promo_group": {
+        "name": "Friends",
+        "server_discount_percent": 10,
+        "traffic_discount_percent": 20,
+        "device_discount_percent": 30
+      },
+      "created_at": null,
+      "last_activity": null
+    }
+  },
+  {
+    "name": "bot_subscription_record",
+    "args": [
+      {
+        "id": 17,
+        "user_id": 42,
+        "status": "active",
+        "actual_status": "active",
+        "is_trial": false,
+        "tariff_id": 4,
+        "created_at": "2026-07-31T12:00:00Z",
+        "start_date": "2026-08-01T00:00:00Z",
+        "end_date": "2026-09-01T00:00:00Z",
+        "autopay_enabled": true,
+        "autopay_days_before": 3,
+        "subscription_url": "https://panel.example/sub/secret"
+      }
+    ],
+    "kwargs": {},
+    "expected": {
+      "id": 17,
+      "bot_record_status": "active",
+      "bot_record_effective_status": "active",
+      "is_trial": false,
+      "tariff_id": 4,
+      "tariff_name": null,
+      "created_at": "2026-07-31T12:00:00Z",
+      "start_date": "2026-08-01T00:00:00Z",
+      "end_date": "2026-09-01T00:00:00Z",
+      "autopay_enabled": true,
+      "autopay_days_before": 3,
+      "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+    }
+  },
+  {
+    "name": "sanitize_subscriptions",
+    "args": [
+      {
+        "id": 42,
+        "telegram_id": 12345,
+        "subscriptions": [
+          {
+            "id": 17,
+            "tariff_id": 4,
+            "tariff_name": "Standard"
+          }
+        ]
+      },
+      [
+        {
+          "id": 17,
+          "user_id": 42,
+          "status": "active",
+          "actual_status": "active",
+          "is_trial": false,
+          "tariff_id": 4,
+          "created_at": "2026-07-31T12:00:00Z",
+          "start_date": "2026-08-01T00:00:00Z",
+          "end_date": "2026-09-01T00:00:00Z",
+          "autopay_enabled": true,
+          "autopay_days_before": 3,
+          "subscription_url": "https://panel.example/sub/secret"
+        }
+      ],
+      42
+    ],
+    "kwargs": {},
+    "expected": {
+      "has_subscription_records": true,
+      "active_record_count": 1,
+      "subscriptions": [
+        {
+          "id": 17,
+          "bot_record_status": "active",
+          "bot_record_effective_status": "active",
+          "is_trial": false,
+          "tariff_id": 4,
+          "tariff_name": "Standard",
+          "created_at": "2026-07-31T12:00:00Z",
+          "start_date": "2026-08-01T00:00:00Z",
+          "end_date": "2026-09-01T00:00:00Z",
+          "autopay_enabled": true,
+          "autopay_days_before": 3,
+          "note": "This is the bot-side Bedolaga purchase record, not the VPN panel status. Verify the actual panel state via the separate Remnawave MCP."
+        }
+      ],
+      "meta": "Bedolaga subscription records are not the VPN panel status."
+    }
+  },
+  {
+    "name": "sanitize_tickets",
+    "args": [
+      [
+        {
+          "id": 101,
+          "user_id": 42,
+          "title": "Need help with VPN",
+          "status": "open",
+          "priority": "normal",
+          "created_at": "2026-08-01T10:00:00Z",
+          "updated_at": "2026-08-01T10:30:00Z",
+          "closed_at": null,
+          "messages": [
+            {
+              "id": 1,
+              "text": "Secret user message"
+            }
+          ],
+          "media": [
+            "photo.jpg"
+          ]
+        }
+      ]
+    ],
+    "kwargs": {
+      "owner_id": 42
+    },
+    "expected": {
+      "has_tickets": true,
+      "tickets": [
+        {
+          "id": 101,
+          "title": "Need help with VPN",
+          "status": "open",
+          "priority": "normal",
+          "created_at": "2026-08-01T10:00:00Z",
+          "updated_at": "2026-08-01T10:30:00Z",
+          "closed_at": null
+        }
+      ],
+      "meta": "Tickets belong to the account owner only; messages and media are intentionally excluded."
+    }
+  }
+]
