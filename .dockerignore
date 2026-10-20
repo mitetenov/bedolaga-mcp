@@ -1,0 +1,15 @@
+# Only production inputs enter the build context. Secrets, local worktrees,
+# documentation, tests and their fixtures cannot invalidate production layers.
+**
+!Dockerfile
+!.dockerignore
+!go.mod
+!go.sum
+!cmd/
+!cmd/bedolaga-mcp/
+!cmd/bedolaga-mcp/*.go
+!internal/
+!internal/bedolaga/
+!internal/bedolaga/*.go
+!internal/bedolaga/tools.json
+**/*_test.go

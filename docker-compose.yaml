@@ -20,7 +20,7 @@ services:
     healthcheck:
       # Liveness: GET /health must return 200. Non-zero exit if the process is
       # alive but not serving.
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3100/health', timeout=5)"]
+      test: ["CMD", "/app/bedolaga-mcp", "healthcheck"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -29,4 +29,4 @@ services:
     # crash-loop caused by a config/startup error surfaces to the operator
     # instead of restarting forever (the previous unless-stopped masked it).
     restart: on-failure:5
-    command: python3 http_server.py
+    command: /app/bedolaga-mcp http
