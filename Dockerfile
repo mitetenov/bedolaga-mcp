@@ -1,5 +1,5 @@
-# syntax=docker/dockerfile:1
-FROM --platform=$BUILDPLATFORM golang:1.27.2-alpine AS build
+# syntax=docker/dockerfile:1.28.0
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine3.24 AS build
 
 # Stable runtime files change independently of dependencies and application code.
 RUN mkdir -p /runtime/etc/ssl/certs /runtime/app /runtime/tmp /runtime/home/appuser \
@@ -9,6 +9,7 @@ RUN mkdir -p /runtime/etc/ssl/certs /runtime/app /runtime/tmp /runtime/home/appu
     && chown 1000:1000 /runtime/home/appuser \
     && chmod 1777 /runtime/tmp
 
+ENV GOTOOLCHAIN=local
 WORKDIR /src
 COPY go.mod go.sum ./
 # Keep modules in an ordinary layer: external CI layer caches restore them even

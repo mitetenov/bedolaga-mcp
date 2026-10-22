@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -18,7 +17,7 @@ import (
 
 func TestStdioExecutable(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "bedolaga-mcp")
-	build := exec.Command(filepath.Join(runtime.GOROOT(), "bin", "go"), "build", "-o", path, ".")
+	build := exec.Command("go", "build", "-o", path, ".")
 	if out, e := build.CombinedOutput(); e != nil {
 		t.Fatalf("build: %s %v", out, e)
 	}
