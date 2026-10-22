@@ -540,9 +540,12 @@ The application parses UTC or explicit numeric-offset timestamps and does not lo
 ## Build and dependency maintenance
 
 Use Go 1.27.3. CI on Ubuntu26.04 verifies module tidy/integrity, formatting,
-vet, golangci-lint 2.15.0, unit/race tests, the production executable and the
+vet, golangci-lint 2.15.0, isolated unit/race tests, the production build and the
 linux/amd64 scratch image. Actions use immutable release SHAs; weekly Dependabot
 groups minor/patch Go, Actions and Docker updates. PR jobs only validate.
 Publication is serialized after smoke succeeds on main and preserves latest,
 package-version and commit image tags. The scratch runtime retains UID1000,
 HTTP/SSE/stdio contracts and embedded resources. No Python runtime/tooling remains.
+
+Tests use mocks and in-process HTTP fixtures. The subprocess executable integration
+suite was removed; no test starts a database, container or separate application.
