@@ -536,3 +536,16 @@ Dependency manifests are copied before the production sources. `go mod download`
 Both CI image jobs import and export GitHub Actions layer cache with `mode=max`. This preserves intermediate dependency layers on fresh runners. BuildKit cache-mount contents are local to a builder and are not exported by that backend; correctness and dependency reuse do not rely on them. Ordinary `docker build -t bedolaga-mcp:local .` still works with Docker's default BuildKit builder.
 
 The application parses UTC or explicit numeric-offset timestamps and does not load IANA time zones. The previous runtime did not install zoneinfo; the minimal runtime retains that behavior and does not add a time-zone database. The existing HTTP/stdio commands and Compose healthcheck use the executable directly.
+
+## Build and dependency maintenance
+
+Use Go 1.27.3. CI on Ubuntu26.04 verifies module tidy/integrity, formatting,
+vet, golangci-lint 2.15.0, isolated unit/race tests, the production build and the
+linux/amd64 scratch image. Actions use immutable release SHAs; weekly Dependabot
+groups minor/patch Go, Actions and Docker updates. PR jobs only validate.
+Publication is serialized after smoke succeeds on main and preserves latest,
+package-version and commit image tags. The scratch runtime retains UID1000,
+HTTP/SSE/stdio contracts and embedded resources. No Python runtime/tooling remains.
+
+Tests use mocks and in-process HTTP fixtures. The subprocess executable integration
+suite was removed; no test starts a database, container or separate application.
