@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.28.0
-FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine3.24 AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.4-alpine3.24 AS build
 
 # Stable runtime files change independently of dependencies and application code.
 RUN mkdir -p /runtime/etc/ssl/certs /runtime/app /runtime/tmp /runtime/home/appuser \
